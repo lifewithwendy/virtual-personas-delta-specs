@@ -34,15 +34,16 @@ function cmdRepos() {
   }
   console.log('Multi-repo project. Tag every task with its repo: - [ ] 1.1 [name] ...');
   const width = Math.max(...Object.keys(config.repos).map((n) => n.length));
+  const pathWidth = Math.max(...Object.values(config.repos).map((p) => p.length));
   for (const [name, p] of Object.entries(config.repos)) {
     const abs = resolve(p);
     let state = 'MISSING';
     if (existsSync(abs)) {
       try {
-        state = `branch ${execSync('git rev-parse --abbrev-ref HEAD', { cwd: abs, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()}`;
+        state = `branch ${execSync('git branch --show-current', { cwd: abs, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()}`;
       } catch { state = 'ok (not a git repo)'; }
     }
-    console.log(`  ${name.padEnd(width)}  ${p}  ${state}`);
+    console.log(`  ${name.padEnd(width)}  ${p.padEnd(pathWidth)}  ${state}`);
   }
 }
 

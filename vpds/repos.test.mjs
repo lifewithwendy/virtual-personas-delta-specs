@@ -106,7 +106,7 @@ test('CLI repos: lists each repo and whether it exists', () => {
   const { root } = planning(['- [ ] 1.1 [api] a'], { repos: { api: '../api', gone: '../definitely-missing-repo' }, create: ['api'] });
   const out = run(root, 'repos');
   assert.match(out, /^Multi-repo project/);
-  assert.match(out, /api {3}\.\.\/api {2}ok \(not a git repo\)|api {3}\.\.\/api {2}branch /);
+  assert.match(out, /api {3}\.\.\/api {23}(ok \(not a git repo\)|branch )/);
   assert.match(out, /gone {2}\.\.\/definitely-missing-repo {2}MISSING/);
 });
 
