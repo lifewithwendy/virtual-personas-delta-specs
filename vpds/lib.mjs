@@ -165,3 +165,81 @@ export function approveChange(change, { by, date, files }) {
   }
   return targets;
 }
+
+// ---------------------------------------------------------------------------
+// Phase checks (step 2d)
+// ---------------------------------------------------------------------------
+
+/** Which persona phase each check name gates. */
+export const PHASES = ['design', 'architect', 'build'];
+
+/**
+ * Is `file` approved and unchanged since approval?
+ * @returns {{ reason?: string, warning?: string }}
+ */
+function approvalState(change, file) {
+  const doc = change.files[file];
+  if (!doc) return { reason: `${file} missing` };
+  const { status, approved_hash, specs_hash } = doc.meta;
+  if (status !== 'approved') return { reason: `${file} is "${status || 'draft'}", needs your approval` };
+  if (!approved_hash) {
+    return { warning: `${file} was approved by hand with no hash lock; run "node vpds/gate.mjs approve ${change.id} ${file}" to lock it` };
+  }
+  if (approved_hash !== bodyHash(doc.body)) return { reason: `${file} changed after approval; review it, then approve again` };
+  if (file === 'design.md' && specs_hash && specs_hash !== specsHash(change.dir)) {
+    return { reason: `specs/ changed after approval; review them, then approve design.md again` };
+  }
+  return {};
+}
+
+/** Files that must be approved before `phase` can start, for a given tier. */
+function requiredApprovals(phase, tier) {
+  if (phase === 'architect') return tier === 'large' ? ['proposal.md', 'ux.md'] : [];
+  if (phase === 'build') {
+    if (tier === 'small') return [];
+    return tier === 'large'
+      ? ['proposal.md', 'ux.md', 'design.md', 'tasks.md']
+      : ['proposal.md', 'design.md', 'tasks.md'];
+  }
+  return [];
+}
+
+/**
+ * May the persona for `phase` start work on this change?
+ * @returns {{ ok: boolean, reasons: string[], warnings: string[] }}
+ */
+export function checkPhase(change, phase) {
+  if (!PHASES.includes(phase)) throw new Error(`unknown phase "${phase}" (use ${PHASES.join(', ')})`);
+  const { tier, files, pushback } = change;
+  const reasons = [];
+  const warnings = [];
+
+  // Phase-specific preconditions
+  if (phase === 'design') {
+    if (!files['proposal.md']) reasons.push('proposal.md missing; run /vp:pm first');
+    else if (tier !== 'large') reasons.push(`tier is "${tier}"; the Designer only runs for large changes`);
+  }
+  if (phase === 'architect') {
+    if (tier === 'small') reasons.push('tier is "small"; small changes go straight to /vp:build');
+    else if (!files['proposal.md']) reasons.push('proposal.md missing; run /vp:pm first');
+  }
+  if (phase === 'build' && tier === 'small' && !files['tasks.md']) {
+    reasons.push('tasks.md missing; write it first (see developer.md, small tier)');
+  }
+
+  // Approvals required by the tier
+  if (!(phase === 'architect' && tier === 'small')) {
+    for (const file of requiredApprovals(phase, tier)) {
+      const { reason, warning } = approvalState(change, file);
+      if (reason) reasons.push(reason);
+      if (warning) warnings.push(warning);
+    }
+  }
+
+  // An open pushback blocks building until the Architect resolves it
+  if (phase === 'build' && pushback && pushback.meta.status !== 'resolved') {
+    reasons.push('pushback.md is open; run /vp:architect to resolve it, then approve again');
+  }
+
+  return { ok: reasons.length === 0, reasons, warnings };
+}

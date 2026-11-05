@@ -4,14 +4,14 @@
 import { execSync } from 'node:child_process';
 import { userInfo } from 'node:os';
 import { createInterface } from 'node:readline/promises';
-import { listChanges, loadChange, formatStatus, approveChange } from './lib.mjs';
+import { listChanges, loadChange, formatStatus, approveChange, checkPhase } from './lib.mjs';
 
 const CHANGES_DIR = 'openspec/changes';
 
 const USAGE = `Usage:
   node vpds/gate.mjs status                                list open changes
   node vpds/gate.mjs approve <id> [files...]               approve files in review (human only)
-  node vpds/gate.mjs check <id> <design|architect|build>   (coming in 2d)`;
+  node vpds/gate.mjs check <id> <design|architect|build>   may this persona start? (exit 0 = yes)`;
 
 function usage() {
   console.error(USAGE);
@@ -51,11 +51,22 @@ async function cmdApprove(id, files) {
   console.log('Next: start a fresh AI session (/clear) before the next persona.');
 }
 
+function cmdCheck(id, phase) {
+  if (!id || !phase) usage();
+  const { ok, reasons, warnings } = checkPhase(loadChange(CHANGES_DIR, id), phase);
+  for (const w of warnings) console.log(`warning: ${w}`);
+  if (ok) return console.log(`OK: "${id}" is ready for ${phase}.`);
+  console.error(`BLOCKED: "${id}" is not ready for ${phase}:`);
+  for (const r of reasons) console.error(`  - ${r}`);
+  process.exit(1);
+}
+
 const [cmd, ...args] = process.argv.slice(2);
 try {
   switch (cmd) {
     case 'status': cmdStatus(); break;
     case 'approve': await cmdApprove(args[0], args.slice(1)); break;
+    case 'check': cmdCheck(args[0], args[1]); break;
     default: usage();
   }
 } catch (err) {
