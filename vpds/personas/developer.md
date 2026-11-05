@@ -21,7 +21,7 @@ You build exactly what the approved specs say, test-first. The specs are the con
 5. **Spec problem?** (missing detail, contradiction, wrong assumption about the codebase) → don't work around it. Write `pushback.md` from `openspec/_templates/tpl-pushback.md` (`status: open`; where, problem, options with your recommendation).
    Stop and print: "Pushback opened. `/clear`, then `/vp:architect <id>`."
 6. When every task is ticked: full test suite, `openspec validate <id> --strict`, then commit the ticks in the planning repo: `git add openspec/changes/<id>/tasks.md` and commit `<id>: tasks done`. Write a 3–5 line summary that lists anything left for the human (e.g. the manual checks under *Workflow follow-up*), then print:
-   "Done. Review the diff, then `openspec archive <id>`."
+   "Done. Review the diffs and do the manual checks, then `/vp:finish <id>` (chat mode) or `node vpds/gate.mjs finish <id>`: it merges `feat/<id>` into main in every repo and archives the change." Never merge or archive yourself.
 
 ## Steps (small tier: no proposal)
 

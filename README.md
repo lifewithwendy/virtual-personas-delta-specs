@@ -110,7 +110,7 @@ Why one planning repo instead of VPDS in every repo? A feature that touches the 
 | 3 | `/vp:architect <id>` | Architect writes `design.md`, delta specs and `tasks.md`; must pass `openspec validate --strict` |
 | 🚦 | `node vpds/gate.mjs approve <id>`, then `/clear` | Gate 2: every file is locked with a hash |
 | 4 | `/vp:build <id>` | Developer runs `gate.mjs check`, then for each task: failing test → code → refactor → tick |
-| 5 | `openspec archive <id>` | Delta specs merge into `openspec/specs/` |
+| 5 | `/vp:finish <id>` or `node vpds/gate.mjs finish <id>` | Merges `feat/<id>` into main in every repo the change touched, archives it (delta specs merge into `openspec/specs/`), commits the planning repo. Never pushes. |
 
 | Tier | When | Flow | Approvals |
 |---|---|---|---|
@@ -127,11 +127,13 @@ node vpds/gate.mjs status                   # every open change, its tier, repos
 node vpds/gate.mjs repos                    # single-repo, or each code repo and its current branch
 node vpds/gate.mjs check <id> build         # exit 0 = this persona may start; 1 = blocked, with reasons
 node vpds/gate.mjs approve <id> [files…]    # you only: approves files in review and locks them
-/vp:approve <id>                            # same, from chat (opt-in "chat" approval mode, below)
+node vpds/gate.mjs finish <id> [--dry-run]  # you only: merge feat/<id> → main in each repo, archive, commit
+/vp:approve <id>  ·  /vp:finish <id>        # same, from chat (opt-in "chat" approval mode, below)
 ```
 
 - **Human-only approval.** By default, `approve` refuses to run without an interactive terminal (AI tools run commands without one) and asks `[y/N]` before writing.
 - **Edit detection.** Approval stores `approved_hash` for each file and `specs_hash` for the delta specs. If anything changes afterwards, `check` blocks. Ticking task checkboxes doesn't count as a change.
+- **Safe finish.** `finish` checks everything first (all tasks ticked, approvals intact, no open pushback, every repo clean and on a `feat/<id>` branch, OpenSpec installed) and changes nothing if any check fails. A merge conflict aborts that repo's merge cleanly; resolve it by hand and run `finish` again (already-merged repos are skipped).
 - **Obsidian-friendly.** Setting `status: approved` by hand still passes, with a warning that the file has no hash lock.
 
 ### Approval modes
@@ -139,7 +141,7 @@ node vpds/gate.mjs approve <id> [files…]    # you only: approves files in revi
 | Mode | How you approve | What keeps the AI from approving |
 |---|---|---|
 | `terminal` (default) | `node vpds/gate.mjs approve <id>` in your own terminal | AI tools have no interactive terminal, so `approve` refuses |
-| `chat` (opt-in) | Type `/vp:approve <id>`, then click **Allow** on the tool's permission prompt | The command can only be typed by you (`disable-model-invocation`), and every `gate.mjs approve` hits an `ask` rule in `.claude/settings.json` |
+| `chat` (opt-in) | Type `/vp:approve <id>` or `/vp:finish <id>`, then click **Allow** on the tool's permission prompt | The commands can only be typed by you (`disable-model-invocation`), and every `gate.mjs approve`/`finish` hits an `ask` rule in `.claude/settings.json` |
 
 Turn on chat mode with `npx vpds init --approval chat` (or `npx vpds update --approval chat`), or set `"approval": "chat"` in `vpds.config.json`. Every approval records `approved_via: terminal | chat`.
 

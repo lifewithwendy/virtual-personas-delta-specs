@@ -22,7 +22,7 @@
 | 4. **Review and approve** | `/vp:approve <id>` or `node vpds/gate.mjs approve <id>` | Read `proposal.md`, `design.md`, `tasks.md`. This is where you steer. |
 | 5. Fresh session | `/clear` | |
 | 6. Build it | `/vp:build <id>` | Wait. It tests first, commits per task, and stops if a spec is wrong. |
-| 7. Check and finish | `openspec archive <id>` | Review the diff, do the manual checks it lists, merge `feat/<id>`, archive, commit. |
+| 7. Check and finish | `/vp:finish <id>` or `node vpds/gate.mjs finish <id>` | Review the diffs and do the manual checks it lists. `finish` merges `feat/<id>` into main in every repo, archives the change and commits. Push when ready. |
 
 Large changes approve twice: after step 2 (proposal + UX) and after step 3.
 Tiny fixes skip it all: `/vp:build "fix the typo on the login button"`.
@@ -34,6 +34,7 @@ Tiny fixes skip it all: `/vp:build "fix the typo on the login button"`.
 | `BLOCKED: … needs your approval` | Review, then approve. |
 | `BLOCKED: … changed after approval` | Someone edited an approved file. Read the diff, then approve again (or revert). |
 | `BLOCKED: pushback.md is open` | The Developer found a spec gap. `/clear`, `/vp:architect <id>` to fix it, then approve again. |
+| `finish`: `merge conflict, merge aborted` | Resolve it in that repo (`git merge feat/<id>`, fix, commit), then run `finish` again. |
 | `BLOCKED: task 2.3 has no [repo] tag` | Multi-repo: ask the Architect to tag it, approve again. |
 | A persona guesses or asks something the spec should have said | Add the heading to the template in `openspec/_templates/` so next time it's asked up front. |
 
@@ -43,4 +44,5 @@ Tiny fixes skip it all: `/vp:build "fix the typo on the login button"`.
 2. **Always `/clear` after approving.** The next persona should know only what the files say.
 3. **Keep proposals short.** If it doesn't fit on a page, it's two changes.
 
-Anytime: `node vpds/gate.mjs status` (what's open) and `node vpds/gate.mjs repos` (which repos).
+Anytime: `node vpds/gate.mjs status` (what's open, with the real change ids) and `node vpds/gate.mjs repos` (which repos).
+Not sure? Add `--dry-run` to `finish` to see exactly what it would do.

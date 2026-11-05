@@ -324,3 +324,63 @@ export function repoProblems(change, config, root = '.') {
   }
   return reasons;
 }
+
+// ---------------------------------------------------------------------------
+// Finishing a change: merge feat/<id> into main in every repo it touched
+// ---------------------------------------------------------------------------
+import { execFileSync } from 'node:child_process';
+
+/** Run git in `cwd`, returning trimmed stdout (throws on non-zero exit). */
+export const git = (cwd, args) =>
+  execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+
+const gitOk = (cwd, args) => {
+  try { git(cwd, args); return true; } catch { return false; }
+};
+
+/** `main`, or `master`, or null. */
+export function mainBranchOf(dir) {
+  return ['main', 'master'].find((b) => gitOk(dir, ['rev-parse', '--verify', '--quiet', `refs/heads/${b}`])) ?? null;
+}
+
+/**
+ * Everything that must be true before `finish` touches any repo.
+ * @returns {{ ok: boolean, reasons: string[], branch: string,
+ *             repos: { name: string, dir: string, main?: string, ahead?: number }[] }}
+ */
+export function finishPreflight(change, config, root = '.') {
+  const reasons = [];
+  const branch = `feat/${change.id}`;
+
+  if (!change.files['tasks.md']) reasons.push('tasks.md missing');
+  const open = parseTasks(change.files['tasks.md']?.body ?? '').filter((t) => !t.done);
+  if (open.length) reasons.push(`${open.length} task(s) not ticked: ${open.map((t) => t.id ?? t.text.slice(0, 30)).join(', ')}`);
+
+  // Same rules as starting the build: approvals intact, no open pushback, repo tags valid.
+  reasons.push(...checkPhase(change, 'build', { config, root }).reasons);
+
+  const multi = isMultiRepo(config);
+  const repos = multi
+    ? changeRepos(change).filter((n) => config.repos[n]).map((n) => ({ name: n, dir: resolve(root, config.repos[n]) }))
+    : [{ name: 'this repo', dir: resolve(root) }];
+  if (multi && !changeRepos(change).length) reasons.push('no [repo]-tagged tasks, so nothing to merge');
+
+  for (const r of repos) {
+    if (!existsSync(r.dir)) continue; // already reported by the repo checks above
+    if (!gitOk(r.dir, ['rev-parse', '--git-dir'])) { reasons.push(`${r.name}: not a git repo`); continue; }
+    r.main = mainBranchOf(r.dir);
+    if (!r.main) reasons.push(`${r.name}: no main or master branch`);
+    if (!gitOk(r.dir, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`])) {
+      reasons.push(`${r.name}: branch ${branch} not found`);
+    } else if (r.main) {
+      r.ahead = Number(git(r.dir, ['rev-list', '--count', `${r.main}..${branch}`]));
+    }
+    if (git(r.dir, ['status', '--porcelain'])) reasons.push(`${r.name}: uncommitted changes (commit or stash them first)`);
+  }
+
+  if (multi) {
+    if (!gitOk(root, ['rev-parse', '--git-dir'])) reasons.push('planning repo is not a git repo');
+    else if (git(root, ['status', '--porcelain'])) reasons.push('planning repo: uncommitted changes (commit or stash them first)');
+  }
+  return { ok: reasons.length === 0, reasons, branch, repos };
+}

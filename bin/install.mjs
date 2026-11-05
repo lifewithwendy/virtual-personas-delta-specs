@@ -157,8 +157,8 @@ export function parseRepos(spec) {
   return repos;
 }
 
-/** Claude Code asks the human before any `gate.mjs approve` runs, in every approval mode. */
-export const APPROVE_ASK_RULES = ['Bash(node vpds/gate.mjs approve:*)', 'Bash(node vpds/gate.mjs approve *)'];
+/** Claude Code asks the human before any human-only gate command (approve, finish) runs, in every approval mode. */
+export const HUMAN_ONLY_ASK_RULES = ['approve', 'finish'].flatMap((c) => [`Bash(node vpds/gate.mjs ${c}:*)`, `Bash(node vpds/gate.mjs ${c} *)`]);
 
 function syncConfig(target, { repos: newRepos, approval }, tools, actions, writes) {
   if (approval && !['terminal', 'chat'].includes(approval)) throw new Error(`--approval must be terminal or chat (got "${approval}")`);
@@ -178,7 +178,7 @@ function syncConfig(target, { repos: newRepos, approval }, tools, actions, write
     const settingsPath = join(target, '.claude', 'settings.json');
     const settings = readJson(settingsPath, {});
     const perms = { ...settings.permissions };
-    perms.ask = [...new Set([...(perms.ask ?? []), ...APPROVE_ASK_RULES])];
+    perms.ask = [...new Set([...(perms.ask ?? []), ...HUMAN_ONLY_ASK_RULES])];
     if (Object.keys(repos).length) {
       perms.additionalDirectories = [...new Set([...(perms.additionalDirectories ?? []), ...Object.values(repos)])];
     }

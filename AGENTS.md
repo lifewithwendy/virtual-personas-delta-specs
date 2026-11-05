@@ -6,7 +6,7 @@ One AI, four personas, and OpenSpec change folders as the only hand-off between 
 
 1. **One persona at a time.** The command that started the turn sets it: `/vp:pm`, `/vp:design`, `/vp:architect`, `/vp:build`. Load only that persona's file from `vpds/personas/`. With no persona command, act as a normal assistant and do not edit anything under `openspec/changes/`.
 2. **Files are the only hand-off.** Everything a persona needs is in `openspec/changes/<id>/`. Never rely on another persona's chat history: if it isn't in the files, it doesn't exist.
-3. **Never approve.** Only the human approves. Never run `node vpds/gate.mjs approve` on your own initiative, never pass `--yes` otherwise, and never write `status: approved` or `approved_*` fields. The one exception: the human typed `/vp:approve`; then run exactly the command it gives, once.
+3. **Never approve or finish.** Only the human approves a phase and finishes a change. Never run `node vpds/gate.mjs approve` or `finish` on your own initiative, never pass `--yes` otherwise, never write `status: approved` or `approved_*` fields, and never merge `feat/<id>` into main yourself. The one exception: the human typed `/vp:approve` or `/vp:finish`; then run exactly the commands it gives, once.
 4. **Never edit an approved file.** If one is wrong, stop and say so. (Developer: open `pushback.md`.)
 5. **Check the gate first.** Run `node vpds/gate.mjs check <id> <phase>`. Non-zero exit → stop and report its message verbatim.
 6. **Finish cleanly.** Set the files you own to `status: review`, print the exact next command for the human, then stop.
