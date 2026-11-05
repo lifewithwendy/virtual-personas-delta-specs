@@ -107,3 +107,29 @@ test('small tier: tasks.md + skip_specs validates and builds with no gate', { sk
   assert.match(run(root, 'check', 'fix-csv-header', 'build'), /^OK/);
   assert.ok(existsSync(join(dir, 'tasks.md')));
 });
+
+test('multi-repo: planning repo with [repo]-tagged tasks validates, gates and archives', { skip }, () => {
+  const root = project();
+  for (const r of ['api', 'web']) mkdirSync(join(root, '..', `${r}-${root.slice(-6)}`), { recursive: true });
+  const repos = { api: `../api-${root.slice(-6)}`, web: `../web-${root.slice(-6)}` };
+  writeFileSync(join(root, 'vpds.config.json'), JSON.stringify({ repos }));
+  const base = join(root, 'openspec', 'changes');
+  const dir = join(base, 'add-invoice-export');
+  sh(root, 'openspec new change add-invoice-export');
+  fromTemplate(root, 'tpl-proposal.md', join(dir, 'proposal.md'), PROPOSAL);
+  architect(root, dir);
+  const tasks = join(dir, 'tasks.md');
+  writeFileSync(tasks, readFileSync(tasks, 'utf8')
+    .replace('- [ ] 1.1 Test:', '- [ ] 1.1 [api] Test:').replace('- [ ] 1.2 Implement:', '- [ ] 1.2 [api] Implement:')
+    .replace('- [ ] 2.1 Test:', '- [ ] 2.1 [web] Test:'));
+  sh(root, 'openspec validate add-invoice-export --strict');
+  approveChange(loadChange(base, 'add-invoice-export'), { by: 'e2e', date: '2026-01-01' });
+
+  // 2.2 is still untagged → blocked
+  assert.throws(() => run(root, 'check', 'add-invoice-export', 'build'), /task 2\.2 has no \[repo\] tag/);
+  writeFileSync(tasks, readFileSync(tasks, 'utf8').replace('- [ ] 2.2 Implement:', '- [ ] 2.2 [web] Implement:'));
+  approveChange(loadChange(base, 'add-invoice-export'), { by: 'e2e', date: '2026-01-01', files: ['tasks'] });
+  assert.match(run(root, 'check', 'add-invoice-export', 'build'), /^OK/);
+  assert.match(run(root, 'status'), /\{api,web\}/);
+  sh(root, 'openspec archive add-invoice-export -y');
+});

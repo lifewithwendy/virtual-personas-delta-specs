@@ -4,12 +4,15 @@
 import { execSync } from 'node:child_process';
 import { userInfo } from 'node:os';
 import { createInterface } from 'node:readline/promises';
-import { listChanges, loadChange, formatStatus, approveChange, checkPhase } from './lib.mjs';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { listChanges, loadChange, formatStatus, approveChange, checkPhase, loadConfig, isMultiRepo, CONFIG_FILE } from './lib.mjs';
 
 const CHANGES_DIR = 'openspec/changes';
 
 const USAGE = `Usage:
   node vpds/gate.mjs status                                list open changes
+  node vpds/gate.mjs repos                                 single repo, or the code repos this project plans for
   node vpds/gate.mjs approve <id> [files...]               approve files in review (human only)
   node vpds/gate.mjs check <id> <design|architect|build>   may this persona start? (exit 0 = yes)`;
 
@@ -22,6 +25,25 @@ function cmdStatus() {
   const ids = listChanges(CHANGES_DIR);
   if (ids.length === 0) return console.log('No open changes.');
   for (const id of ids) console.log(formatStatus(loadChange(CHANGES_DIR, id)));
+}
+
+function cmdRepos() {
+  const config = loadConfig('.');
+  if (!isMultiRepo(config)) {
+    return console.log(`Single-repo project: code lives in this repo (no repos in ${CONFIG_FILE}).`);
+  }
+  console.log('Multi-repo project. Tag every task with its repo: - [ ] 1.1 [name] ...');
+  const width = Math.max(...Object.keys(config.repos).map((n) => n.length));
+  for (const [name, p] of Object.entries(config.repos)) {
+    const abs = resolve(p);
+    let state = 'MISSING';
+    if (existsSync(abs)) {
+      try {
+        state = `branch ${execSync('git rev-parse --abbrev-ref HEAD', { cwd: abs, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()}`;
+      } catch { state = 'ok (not a git repo)'; }
+    }
+    console.log(`  ${name.padEnd(width)}  ${p}  ${state}`);
+  }
 }
 
 function whoAmI() {
@@ -53,7 +75,7 @@ async function cmdApprove(id, files) {
 
 function cmdCheck(id, phase) {
   if (!id || !phase) usage();
-  const { ok, reasons, warnings } = checkPhase(loadChange(CHANGES_DIR, id), phase);
+  const { ok, reasons, warnings } = checkPhase(loadChange(CHANGES_DIR, id), phase, { config: loadConfig('.'), root: '.' });
   for (const w of warnings) console.log(`warning: ${w}`);
   if (ok) return console.log(`OK: "${id}" is ready for ${phase}.`);
   console.error(`BLOCKED: "${id}" is not ready for ${phase}:`);
@@ -65,6 +87,7 @@ const [cmd, ...args] = process.argv.slice(2);
 try {
   switch (cmd) {
     case 'status': cmdStatus(); break;
+    case 'repos': cmdRepos(); break;
     case 'approve': await cmdApprove(args[0], args.slice(1)); break;
     case 'check': cmdCheck(args[0], args[1]); break;
     default: usage();

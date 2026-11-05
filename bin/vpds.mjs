@@ -3,7 +3,7 @@
 import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { install } from './install.mjs';
+import { install, parseRepos } from './install.mjs';
 
 const USAGE = `Usage: npx vpds <init|update> [dir] [options]
 
@@ -12,6 +12,8 @@ const USAGE = `Usage: npx vpds <init|update> [dir] [options]
 
 Options:
   --tools claude,cursor   which AI tools to install commands for (default: both)
+  --repos a=../a,b=../b   multi-repo: this folder is the planning repo for these code repos
+                          (written to vpds.config.json; edit it later and run update to resync)
   --no-obsidian           skip the Obsidian dashboard, canvas and vault settings
   --no-openspec           don't run \`openspec init\` (init only)
   --force                 replace files you've edited
@@ -26,6 +28,8 @@ function parse(argv) {
     const a = argv[i];
     if (a === '--tools') opts.tools = argv[++i]?.split(',').map((s) => s.trim()).filter(Boolean);
     else if (a.startsWith('--tools=')) opts.tools = a.slice(8).split(',').map((s) => s.trim()).filter(Boolean);
+    else if (a === '--repos') opts.repos = parseRepos(argv[++i]);
+    else if (a.startsWith('--repos=')) opts.repos = parseRepos(a.slice(8));
     else if (a === '--no-obsidian') opts.obsidian = false;
     else if (a === '--no-openspec') opts.openspec = false;
     else if (a === '--force') opts.force = true;
@@ -47,7 +51,14 @@ function runOpenspecInit(dir, tools) {
   execSync(`openspec init . --tools ${tools.join(',')}`, { cwd: dir, stdio: 'inherit', shell: true });
 }
 
-const { cmd, dir, opts } = parse(process.argv.slice(2));
+let parsed;
+try {
+  parsed = parse(process.argv.slice(2));
+} catch (err) {
+  console.error(`vpds: ${err.message}`);
+  process.exit(1);
+}
+const { cmd, dir, opts } = parsed;
 if (!['init', 'update'].includes(cmd)) {
   console.error(USAGE);
   process.exit(cmd === 'help' ? 0 : 1);
@@ -63,6 +74,9 @@ try {
   console.log(`\n${opts.dryRun ? 'Dry run: nothing written.' : `VPDS ${manifest.version} ${cmd === 'init' ? 'installed' : 'updated'}.`}${skipped ? ` ${skipped} file(s) skipped.` : ''}`);
   if (cmd === 'init' && opts.openspec && !opts.dryRun) runOpenspecInit(dir, manifest.tools);
   if (cmd === 'init' && !opts.dryRun) {
+    if (actions.some((a) => a.path === 'vpds.config.json')) {
+      console.log('\nMulti-repo: open this folder in Claude Code (sibling repos are added via .claude/settings.json),\n            or open vpds.code-workspace in Cursor. Check with: node vpds/gate.mjs repos');
+    }
     console.log(`\nStart your first change:  /vp:pm <idea>   (Cursor: /vp-pm)\nSee where things stand:   node vpds/gate.mjs status`);
   }
 } catch (err) {

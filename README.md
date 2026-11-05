@@ -72,6 +72,32 @@ npx vpds init                    # or: npx vpds init --tools claude   (claude | 
 
 **Optional: Obsidian.** Choose *Open folder as vault* and pick the `openspec/` folder. In Settings → Core plugins, turn on **Templates**, **Bases** and **Canvas**. Open `changes.base` to see what's waiting for your review.
 
+## Single repo or many
+
+VPDS works the same way in both. The only difference is one optional file.
+
+**Single repo (default).** Run `npx vpds init` in the repo. Specs live in `openspec/` next to the code. There's nothing to configure.
+
+**Several repos** (for example API, web app, mobile app, infra). Create a small **planning repo** next to them and install VPDS there with the list of code repos:
+
+```
+my-product/
+├── planning/   ← npx vpds init --repos api=../api,web=../web,mobile=../mobile,infra=../infra
+├── api/
+├── web/
+├── mobile/
+└── infra/
+```
+
+- `vpds.config.json` records the repos and is the source of truth. Edit it, then run `npx vpds update` to resync the tool settings.
+- **Claude Code:** open `planning/`. The installer adds the code repos to `.claude/settings.json` (`additionalDirectories`), so one session can work across all of them.
+- **Cursor / VS Code:** open `vpds.code-workspace`, a multi-root workspace with the planning repo and every code repo.
+- One change can span several repos. The Architect tags every task with its repo (`- [ ] 1.1 [api] Test: …`) and fills **Repos Affected** with the ship order. The gate blocks tasks that are untagged or use an unknown repo, and repos missing on disk.
+- The Developer works, tests and commits inside each task's repo, on the branch `feat/<change-id>`, so the related PRs are easy to find.
+- `node vpds/gate.mjs repos` shows the setup; `status` shows which repos each change touches.
+
+Why one planning repo instead of VPDS in every repo? A feature that touches the API and the app stays **one** change with **one** approval, and one place describes the whole behaviour.
+
 ## How a change moves
 
 | Step | You run | What happens |
@@ -95,7 +121,8 @@ npx vpds init                    # or: npx vpds init --tools claude   (claude | 
 ## The gate
 
 ```bash
-node vpds/gate.mjs status                   # every open change, its tier and each file's status
+node vpds/gate.mjs status                   # every open change, its tier, repos and each file's status
+node vpds/gate.mjs repos                    # single-repo, or each code repo and its current branch
 node vpds/gate.mjs check <id> build         # exit 0 = this persona may start; 1 = blocked, with reasons
 node vpds/gate.mjs approve <id> [files…]    # you only: approves files in review and locks them
 ```
@@ -112,6 +139,7 @@ node vpds/gate.mjs approve <id> [files…]    # you only: approves files in revi
 | Agents / contexts | 1 at a time, fresh after each gate | Many role agents | Many agents, each with its own LLM calls | 1 |
 | Role separation | ✅ Hard file ownership | ✅ | ✅ | ❌ One role drafts everything |
 | Human sign-off | ✅ Enforced by script + hash lock | Workflow convention | You build it | Convention |
+| Multi-repo products | ✅ Planning repo + `[repo]`-tagged tasks, gate-checked | — | — | Stores (standalone planning repo) |
 | Scales to change size | ✅ small / medium / large | Mostly full pipeline | You build it | ✅ |
 | Spec format | OpenSpec deltas (validated) | PRD, architecture, sharded stories | None built in | OpenSpec deltas |
 | Setup | `openspec init` + copy files | Installer + config | Python project + code | `openspec init` |

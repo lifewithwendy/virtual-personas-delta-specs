@@ -103,6 +103,8 @@ export function loadChange(changesDir, id) {
 /** One-line summary: `id  [tier]  proposal:approved  design:review  PUSHBACK:open` */
 export function formatStatus(change) {
   const parts = [change.id, `[${change.tier}]`];
+  const repos = changeRepos(change);
+  if (repos.length) parts.push(`{${repos.join(',')}}`);
   for (const [name, doc] of Object.entries(change.files)) {
     parts.push(`${name.replace('.md', '')}:${doc.meta.status || 'draft'}`);
   }
@@ -208,7 +210,7 @@ function requiredApprovals(phase, tier) {
  * May the persona for `phase` start work on this change?
  * @returns {{ ok: boolean, reasons: string[], warnings: string[] }}
  */
-export function checkPhase(change, phase) {
+export function checkPhase(change, phase, { config = { repos: {} }, root = '.' } = {}) {
   if (!PHASES.includes(phase)) throw new Error(`unknown phase "${phase}" (use ${PHASES.join(', ')})`);
   const { tier, files, pushback } = change;
   const reasons = [];
@@ -236,10 +238,80 @@ export function checkPhase(change, phase) {
     }
   }
 
+  // Multi-repo: every task must say which repo it belongs to
+  if (phase === 'build') reasons.push(...repoProblems(change, config, root));
+
   // An open pushback blocks building until the Architect resolves it
   if (phase === 'build' && pushback && pushback.meta.status !== 'resolved') {
     reasons.push('pushback.md is open; run /vp:architect to resolve it, then approve again');
   }
 
   return { ok: reasons.length === 0, reasons, warnings };
+}
+
+// ---------------------------------------------------------------------------
+// Single- vs multi-repo projects
+// ---------------------------------------------------------------------------
+// No vpds.config.json (or no repos in it) → single repo: code lives next to openspec/.
+// With repos → this is a planning repo; code lives in the listed repos and every task
+// in tasks.md is tagged with the repo it belongs to: `- [ ] 1.1 [api] Test: …`.
+import { resolve } from 'node:path';
+
+export const CONFIG_FILE = 'vpds.config.json';
+
+/** @returns {{ repos: Record<string,string> }} repo name → path (relative to the project root) */
+export function loadConfig(root = '.') {
+  const path = join(root, CONFIG_FILE);
+  if (!existsSync(path)) return { repos: {} };
+  let config;
+  try {
+    config = JSON.parse(readFileSync(path, 'utf8'));
+  } catch (err) {
+    throw new Error(`${CONFIG_FILE} is not valid JSON: ${err.message}`);
+  }
+  const repos = config.repos ?? {};
+  for (const [name, p] of Object.entries(repos)) {
+    if (!/^[\w-]+$/.test(name)) throw new Error(`${CONFIG_FILE}: repo name "${name}" must be letters, digits, - or _`);
+    if (typeof p !== 'string' || !p) throw new Error(`${CONFIG_FILE}: repo "${name}" needs a path string`);
+  }
+  return { ...config, repos };
+}
+
+export const isMultiRepo = (config) => Object.keys(config?.repos ?? {}).length > 0;
+
+/** Checkbox tasks in a tasks.md body → [{ id, repo, text, done }] */
+export function parseTasks(body) {
+  const tasks = [];
+  for (const m of normalise(body).matchAll(/^\s*[-*] \[([ xX]?)\]\s+(.*)$/gm)) {
+    let text = m[2];
+    const id = text.match(/^(\d+(?:\.\d+)*)\s+/);
+    if (id) text = text.slice(id[0].length);
+    const repo = text.match(/^\[([\w-]+)\]\s*/);
+    if (repo) text = text.slice(repo[0].length);
+    tasks.push({ id: id?.[1] ?? null, repo: repo?.[1] ?? null, text, done: /x/i.test(m[1]) });
+  }
+  return tasks;
+}
+
+/** Repos a change touches, from its task tags (sorted, unique). */
+export function changeRepos(change) {
+  const body = change.files['tasks.md']?.body ?? '';
+  return [...new Set(parseTasks(body).map((t) => t.repo).filter(Boolean))].sort();
+}
+
+/** In a multi-repo project, every task needs a known [repo] tag and that repo must exist on disk. */
+export function repoProblems(change, config, root = '.') {
+  if (!isMultiRepo(config) || !change.files['tasks.md']) return [];
+  const known = Object.keys(config.repos);
+  const reasons = [];
+  for (const t of parseTasks(change.files['tasks.md'].body)) {
+    const label = t.id ? `task ${t.id}` : `task "${t.text.slice(0, 40)}"`;
+    if (!t.repo) reasons.push(`${label} has no [repo] tag (known repos: ${known.join(', ')})`);
+    else if (!config.repos[t.repo]) reasons.push(`${label} uses unknown repo [${t.repo}] (known repos: ${known.join(', ')})`);
+  }
+  for (const name of changeRepos(change)) {
+    const p = config.repos[name];
+    if (p && !existsSync(resolve(root, p))) reasons.push(`repo "${name}" not found at ${p} (fix the path in ${CONFIG_FILE})`);
+  }
+  return reasons;
 }

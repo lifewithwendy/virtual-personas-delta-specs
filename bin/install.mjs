@@ -56,10 +56,11 @@ const GITIGNORE_BLOCK = [
 /**
  * Plan (and optionally apply) an install or update.
  * @param {string} target project directory
- * @param {{ mode: 'init'|'update', tools?: string[], obsidian?: boolean, force?: boolean, dryRun?: boolean }} opts
+ * @param {{ mode: 'init'|'update', tools?: string[], obsidian?: boolean, force?: boolean, dryRun?: boolean,
+ *           repos?: Record<string,string> }} opts  repos: code repos for a multi-repo (planning repo) setup
  * @returns {{ actions: { path: string, action: 'create'|'update'|'unchanged'|'skip'|'merge' , note?: string }[] }}
  */
-export function install(target, { mode = 'init', tools, obsidian = true, force = false, dryRun = false } = {}) {
+export function install(target, { mode = 'init', tools, obsidian = true, force = false, dryRun = false, repos = {} } = {}) {
   const manifestPath = join(target, MANIFEST);
   const hasManifest = existsSync(manifestPath);
   if (mode === 'init' && hasManifest) throw new Error('VPDS is already installed here. Run `npx vpds update` instead.');
@@ -121,6 +122,9 @@ export function install(target, { mode = 'init', tools, obsidian = true, force =
     pushMerge(actions, writes, '.gitignore', giPath, old, upsertBlock(old, GITIGNORE_BLOCK, GITIGNORE_START, GITIGNORE_END));
   }
 
+  // Multi-repo: vpds.config.json is the source of truth; tool settings are synced from it.
+  syncRepos(target, repos, tools, actions, writes);
+
   if (!dryRun) {
     for (const [dest, content] of writes) {
       mkdirSync(dirname(dest), { recursive: true });
@@ -129,6 +133,50 @@ export function install(target, { mode = 'init', tools, obsidian = true, force =
     writeFileSync(manifestPath, `${JSON.stringify(next, null, 2)}\n`);
   }
   return { actions, manifest: next };
+}
+
+const readJson = (path, fallback) => (existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : fallback);
+const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
+
+/** Parse `api=../api,web=../web` into { api: '../api', web: '../web' }. */
+export function parseRepos(spec) {
+  const repos = {};
+  for (const part of (spec ?? '').split(',').map((s) => s.trim()).filter(Boolean)) {
+    const [name, path] = part.split('=').map((s) => s?.trim());
+    if (!name || !path || !/^[\w-]+$/.test(name)) throw new Error(`--repos: expected name=path, got "${part}"`);
+    repos[name] = path.replace(/\\/g, '/');
+  }
+  return repos;
+}
+
+function syncRepos(target, newRepos, tools, actions, writes) {
+  const configPath = join(target, 'vpds.config.json');
+  const config = readJson(configPath, {});
+  const repos = { ...(config.repos ?? {}), ...newRepos };
+  if (!Object.keys(repos).length) return; // single-repo project: nothing to do
+
+  const configOld = existsSync(configPath) ? readFileSync(configPath, 'utf8') : '';
+  pushMerge(actions, writes, 'vpds.config.json', configPath, configOld, json({ ...config, repos }));
+
+  if (tools.includes('claude')) {
+    // Claude Code: let the session read and edit the sibling repos.
+    const settingsPath = join(target, '.claude', 'settings.json');
+    const settings = readJson(settingsPath, {});
+    const dirs = new Set(settings.permissions?.additionalDirectories ?? []);
+    for (const p of Object.values(repos)) dirs.add(p);
+    const next = { ...settings, permissions: { ...settings.permissions, additionalDirectories: [...dirs] } };
+    const old = existsSync(settingsPath) ? readFileSync(settingsPath, 'utf8') : '';
+    pushMerge(actions, writes, '.claude/settings.json', settingsPath, old, json(next));
+  }
+  if (tools.includes('cursor')) {
+    // Cursor / VS Code: one multi-root workspace with the planning repo and every code repo.
+    const wsPath = join(target, 'vpds.code-workspace');
+    const ws = readJson(wsPath, { folders: [{ name: 'planning', path: '.' }] });
+    const have = new Set(ws.folders.map((f) => f.path));
+    for (const [name, p] of Object.entries(repos)) if (!have.has(p)) ws.folders.push({ name, path: p });
+    const old = existsSync(wsPath) ? readFileSync(wsPath, 'utf8') : '';
+    pushMerge(actions, writes, 'vpds.code-workspace', wsPath, old, json(ws));
+  }
 }
 
 function pushMerge(actions, writes, rel, dest, oldText, newText) {

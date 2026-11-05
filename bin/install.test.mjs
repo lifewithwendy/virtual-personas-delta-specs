@@ -198,3 +198,71 @@ test('CLI init --no-openspec installs and the gate works in the new project', ()
 test('CLI with no command prints usage and exits 1', () => {
   assert.throws(() => execFileSync(process.execPath, [CLI], { stdio: 'pipe' }), (e) => e.status === 1 && /Usage:/.test(e.stderr));
 });
+
+// ---------- multi-repo ----------
+
+import { parseRepos } from './install.mjs';
+const REPOS = { api: '../api', web: '../web' };
+
+test('parseRepos reads name=path pairs and normalises backslashes', () => {
+  assert.deepEqual(parseRepos('api=../api, web=..\\web'), REPOS);
+  assert.throws(() => parseRepos('api'), /expected name=path/);
+});
+
+test('single-repo init writes no config, workspace or Claude settings', () => {
+  const dir = project();
+  install(dir, { mode: 'init' });
+  for (const f of ['vpds.config.json', 'vpds.code-workspace', '.claude/settings.json']) assert.ok(!existsSync(join(dir, f)), f);
+});
+
+test('multi-repo init writes config, Claude additionalDirectories and a code-workspace', () => {
+  const dir = project();
+  install(dir, { mode: 'init', repos: REPOS });
+  assert.deepEqual(JSON.parse(read(dir, 'vpds.config.json')), { repos: REPOS });
+  assert.deepEqual(JSON.parse(read(dir, '.claude/settings.json')).permissions.additionalDirectories, ['../api', '../web']);
+  assert.deepEqual(JSON.parse(read(dir, 'vpds.code-workspace')).folders.map((f) => f.path), ['.', '../api', '../web']);
+});
+
+test('multi-repo init keeps existing Claude settings', () => {
+  const dir = project();
+  mkdirSync(join(dir, '.claude'), { recursive: true });
+  writeFileSync(join(dir, '.claude/settings.json'), JSON.stringify({ model: 'x', permissions: { allow: ['Bash(npm test)'] } }));
+  install(dir, { mode: 'init', repos: REPOS });
+  const s = JSON.parse(read(dir, '.claude/settings.json'));
+  assert.equal(s.model, 'x');
+  assert.deepEqual(s.permissions.allow, ['Bash(npm test)']);
+  assert.deepEqual(s.permissions.additionalDirectories, ['../api', '../web']);
+});
+
+test('update resyncs tool settings after you add a repo to vpds.config.json', () => {
+  const dir = project();
+  install(dir, { mode: 'init', repos: REPOS });
+  writeFileSync(join(dir, 'vpds.config.json'), JSON.stringify({ repos: { ...REPOS, mobile: '../mobile' } }));
+  install(dir, { mode: 'update' });
+  assert.ok(JSON.parse(read(dir, '.claude/settings.json')).permissions.additionalDirectories.includes('../mobile'));
+  assert.ok(JSON.parse(read(dir, 'vpds.code-workspace')).folders.some((f) => f.name === 'mobile'));
+});
+
+test('multi-repo update with nothing new changes nothing', () => {
+  const dir = project();
+  install(dir, { mode: 'init', repos: REPOS });
+  assert.deepEqual([...new Set(install(dir, { mode: 'update' }).actions.map((a) => a.action))], ['unchanged']);
+});
+
+test('--tools claude writes no code-workspace', () => {
+  const dir = project();
+  install(dir, { mode: 'init', tools: ['claude'], repos: REPOS });
+  assert.ok(!existsSync(join(dir, 'vpds.code-workspace')));
+});
+
+test('CLI init --repos sets up a planning repo whose gate sees the repos', () => {
+  const dir = project();
+  const out = execFileSync(process.execPath, [CLI, 'init', dir, '--no-openspec', '--repos', 'api=../api'], { encoding: 'utf8' });
+  assert.match(out, /Multi-repo/);
+  assert.match(execFileSync(process.execPath, ['vpds/gate.mjs', 'repos'], { cwd: dir, encoding: 'utf8' }), /^Multi-repo project/);
+});
+
+test('CLI rejects a malformed --repos value', () => {
+  assert.throws(() => execFileSync(process.execPath, [CLI, 'init', project(), '--repos', 'oops'], { stdio: 'pipe' }),
+    (e) => e.status === 1 && /expected name=path/.test(e.stderr));
+});

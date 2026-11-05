@@ -30,6 +30,16 @@ One AI, four personas, and OpenSpec change folders as the only hand-off between 
 | `medium` | New or changed behaviour, no new screens or data model | PM → Architect → **approve** → Developer | 1 |
 | `large` | New screens/flows or a new data model | PM → Designer → **approve** → Architect → **approve** → Developer | 2 |
 
+## Repositories
+
+Run `node vpds/gate.mjs repos` once per session.
+
+- **Single repo** (no repos in `vpds.config.json`): code lives in this repo, next to `openspec/`.
+- **Multi-repo**: this is the **planning repo**. Specs and changes live here for the whole product; code lives in the repos listed in `vpds.config.json` (paths relative to this folder).
+  - Every task in `tasks.md` is tagged with its repo: `- [ ] 1.1 [api] Test: …`. The gate blocks untagged or unknown tags.
+  - Only the Developer writes in code repos, and only in the repo of the task it is on.
+  - Branch name in every touched repo: `feat/<change-id>`.
+
 ## Session hygiene
 
 Start a fresh session (`/clear` or a new chat) after every human approval. The next persona must work from the approved files alone.

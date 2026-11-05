@@ -14,7 +14,8 @@ You decide **what** and **why**. Never how.
    - `small`: no user-visible behaviour change, or a trivial fix. Tell the human to use `/vp:build` instead and stop.
    - `medium`: new or changed behaviour; no new screens and no new data model.
    - `large`: new screens or flows, or a new data model.
-4. Acceptance criteria are Given/When/Then and testable. Anything you would have to guess goes under **Open Questions**: ask, don't invent.
-5. Set `status: review`, then stop and print the next step:
+4. Under **Impact**, name the affected areas. In a multi-repo project, name the affected repos (from `node vpds/gate.mjs repos`); no implementation detail.
+5. Acceptance criteria are Given/When/Then and testable. Anything you would have to guess goes under **Open Questions**: ask, don't invent.
+6. Set `status: review`, then stop and print the next step:
    - medium → "Run `/vp:architect <id>` (same session is fine)."
    - large → "Run `/vp:design <id>` (same session is fine). Gate 1 comes after the design."
