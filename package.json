@@ -12,6 +12,14 @@
     "tdd",
     "obsidian"
   ],
+  "homepage": "https://github.com/lifewithwendy/virtual-personas-delta-specs#readme",
+  "bugs": {
+    "url": "https://github.com/lifewithwendy/virtual-personas-delta-specs/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lifewithwendy/virtual-personas-delta-specs.git"
+  },
   "license": "MIT",
   "author": "Wendt Edmund",
   "type": "module",
