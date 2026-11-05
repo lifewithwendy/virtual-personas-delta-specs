@@ -1,0 +1,138 @@
+# Virtual Personas over Delta Specs (VPDS)
+
+**One AI, four personas, delta specs, and human gates.** You get the role separation of a multi-agent framework without the agents.
+
+VPDS runs inside the AI coding tool you already use (Claude Code or Cursor). The single AI switches between four tightly scoped personas (**PM → Designer → Architect → Developer/QA**). Each persona writes one kind of file into an [OpenSpec](https://github.com/Fission-AI/OpenSpec) change folder, and **a small script blocks the next persona until you approve the previous phase.**
+
+```
+/vp:pm ──► proposal.md ─┐
+/vp:design ─► ux.md ────┴─► 🚦 approve ─► /vp:architect ─► design.md · specs/ · tasks.md
+                                                             └─► 🚦 approve ─► /vp:build ─► tests + code
+                                                                                  └─► openspec archive
+```
+
+## Why
+
+Multi-agent frameworks such as BMAD and CrewAI separate roles well, but they cost you in three places:
+
+- **Tokens:** every agent carries a long persona prompt and re-reads documents and conversation history.
+- **Ceremony:** installers, agent teams, story sharding, and many documents for every change.
+- **Speed:** a one-line fix goes through the same pipeline as a new product area.
+
+VPDS keeps the part that matters (**each role only does its own job, and you sign off between them**) and cuts the rest:
+
+- **One context at a time.** A fresh session after each gate means each persona reads only the approved files, never the previous persona's chat.
+- **Short personas, loaded on demand.** Each persona is about 150–300 words and is loaded only by its own slash command.
+- **Delta specs.** Personas read the change folder and only the specs it touches (OpenSpec), not the whole spec tree.
+- **Tiers.** Small changes skip straight to the Developer; only large ones use all four personas.
+- **Enforced gates.** `vpds/gate.mjs` is plain code, so approval doesn't depend on the AI choosing to obey.
+
+## Folder structure
+
+```
+.
+├── AGENTS.md                    # Shared rules: one persona at a time, file ownership, tiers
+├── CLAUDE.md                    # @AGENTS.md (Claude Code reads AGENTS.md through this)
+├── .claude/commands/vp/         # /vp:pm  /vp:design  /vp:architect  /vp:build
+├── .cursor/commands/            # /vp-pm  /vp-design  /vp-architect  /vp-build
+├── vpds/
+│   ├── personas/                # pm.md · designer.md · architect.md · developer.md
+│   ├── gate.mjs                 # status · approve · check (zero dependencies)
+│   ├── lib.mjs                  # frontmatter, hashing, phase rules
+│   └── *.test.mjs               # 66 tests, including end-to-end with the OpenSpec CLI
+└── openspec/                    # ← also the Obsidian vault
+    ├── config.yaml              # from `openspec init`
+    ├── specs/                   # living specs (source of truth)
+    ├── changes/<id>/            # proposal.md · ux.md · design.md · specs/ · tasks.md · pushback.md
+    ├── _templates/              # tpl-proposal · tpl-ux · tpl-design · tpl-spec · tpl-tasks · tpl-pushback
+    ├── changes.base             # Obsidian dashboard: awaiting review, pipeline board, archive
+    ├── pipeline.canvas          # Obsidian canvas of the workflow
+    └── .obsidian/               # vault settings (templates folder, relative links)
+```
+
+## Quickstart
+
+Requires Node 20.11 or later and git.
+
+```bash
+# 1. Get the framework into your project
+#    New project: clone this repo. Existing project: copy AGENTS.md, CLAUDE.md, .claude/commands/vp,
+#    .cursor/commands, vpds/ and the openspec/ files above (merge AGENTS.md/CLAUDE.md if you have them).
+git clone https://github.com/<you>/virtual-personas-delta-specs my-project && cd my-project
+
+# 2. Install OpenSpec and set it up for your tools
+npm i -g @fission-ai/openspec
+openspec init --tools claude,cursor
+
+# 3. Check everything works
+npm test
+
+# 4. Start your first change (in Claude Code; Cursor uses /vp-pm)
+/vp:pm Users want to export invoices as CSV for their accountant
+```
+
+**Optional: Obsidian.** Choose *Open folder as vault* and pick the `openspec/` folder. In Settings → Core plugins, turn on **Templates**, **Bases** and **Canvas**. Open `changes.base` to see what's waiting for your review.
+
+## How a change moves
+
+| Step | You run | What happens |
+|---|---|---|
+| 1 | `/vp:pm <idea>` | PM creates the change and writes `proposal.md` with a **tier** |
+| 2 | `/vp:design <id>` *(large only)* | Designer writes `ux.md`: flows, wireframes, states, a11y |
+| 🚦 | `node vpds/gate.mjs approve <id>` *(large)*, then `/clear` | Gate 1 |
+| 3 | `/vp:architect <id>` | Architect writes `design.md`, delta specs and `tasks.md`; must pass `openspec validate --strict` |
+| 🚦 | `node vpds/gate.mjs approve <id>`, then `/clear` | Gate 2: every file is locked with a hash |
+| 4 | `/vp:build <id>` | Developer runs `gate.mjs check`, then for each task: failing test → code → refactor → tick |
+| 5 | `openspec archive <id>` | Delta specs merge into `openspec/specs/` |
+
+| Tier | When | Flow | Approvals |
+|---|---|---|---|
+| **small** | No behaviour change or a trivial fix | `/vp:build "<request>"` | 0 (review the diff) |
+| **medium** | New or changed behaviour | PM → Architect → 🚦 → Dev | 1 |
+| **large** | New screens/flows or data model | PM → Designer → 🚦 → Architect → 🚦 → Dev | 2 |
+
+**Pushback.** If the Developer finds a gap in the spec, it opens `pushback.md` instead of working around it. That blocks the build until the Architect resolves it and you approve again.
+
+## The gate
+
+```bash
+node vpds/gate.mjs status                   # every open change, its tier and each file's status
+node vpds/gate.mjs check <id> build         # exit 0 = this persona may start; 1 = blocked, with reasons
+node vpds/gate.mjs approve <id> [files…]    # you only: approves files in review and locks them
+```
+
+- **Human-only approval.** `approve` refuses to run without an interactive terminal (AI tools run commands without one) and asks `[y/N]` before writing.
+- **Edit detection.** Approval stores `approved_hash` for each file and `specs_hash` for the delta specs. If anything changes afterwards, `check` blocks. Ticking task checkboxes doesn't count as a change.
+- **Obsidian-friendly.** Setting `status: approved` by hand still passes, with a warning that the file has no hash lock.
+
+## VPDS compared with multi-agent frameworks
+
+| | **VPDS** | **BMAD Method** | **CrewAI** | **Plain OpenSpec** |
+|---|---|---|---|---|
+| What it is | Rules + 4 personas in your AI tool | Agent team + workflows in your AI tool | Python multi-agent framework | Spec workflow in your AI tool |
+| Agents / contexts | 1 at a time, fresh after each gate | Many role agents | Many agents, each with its own LLM calls | 1 |
+| Role separation | ✅ Hard file ownership | ✅ | ✅ | ❌ One role drafts everything |
+| Human sign-off | ✅ Enforced by script + hash lock | Workflow convention | You build it | Convention |
+| Scales to change size | ✅ small / medium / large | Mostly full pipeline | You build it | ✅ |
+| Spec format | OpenSpec deltas (validated) | PRD, architecture, sharded stories | None built in | OpenSpec deltas |
+| Setup | `openspec init` + copy files | Installer + config | Python project + code | `openspec init` |
+| Runtime dependencies | None (Node built-ins) | Installer | Python packages | OpenSpec CLI |
+
+**On token cost:** VPDS is designed to spend fewer tokens: one active persona, no messages passed between agents, history cleared at every gate, and only delta specs read. The savings depend on your project and tools, so **we don't quote a percentage**. To measure it on your own work, run the same feature through each framework and compare the usage your tool reports (for example `/cost` in Claude Code). Benchmark results are welcome as pull requests.
+
+## Limitations
+
+- Personas are enforced by **prompt** for what they write, and by **script** only for when they may start. A misbehaving AI could still edit a file it doesn't own. The hash lock catches that at the next `check`, but it doesn't prevent it.
+- An AI tool that runs commands in a real terminal could reach the `approve` prompt. Review your tool's command permissions.
+- Supports Claude Code and Cursor today. Other tools that read `AGENTS.md` should work but need their own command wrappers.
+
+## Roadmap
+
+- `npx vpds init` installer for existing projects
+- Command wrappers for Roo Code, GitHub Copilot and Windsurf
+- Optional pre-commit hook: block code commits while a change's gate is closed
+- Published token benchmarks
+
+## License
+
+[MIT](LICENSE) © 2026 Wendt Edmund
