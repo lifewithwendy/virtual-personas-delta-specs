@@ -1,0 +1,14 @@
+{
+  "name": "virtual-personas-delta-specs",
+  "version": "0.1.0",
+  "description": "One AI, four personas, delta specs and human gates: a lightweight alternative to multi-agent dev frameworks.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "author": "Wendt Edmund",
+  "engines": { "node": ">=20.11" },
+  "scripts": {
+    "test": "node --test \"vpds/*.test.mjs\"",
+    "gate": "node vpds/gate.mjs"
+  }
+}
