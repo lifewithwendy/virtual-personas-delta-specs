@@ -27,7 +27,7 @@ function planning(lines, { repos = { api: '../api', web: '../web' }, create = ['
 
 test('no config file means single-repo', () => {
   const { root } = makeRepo({});
-  assert.deepEqual(loadConfig(root), { repos: {} });
+  assert.deepEqual(loadConfig(root), { repos: {}, approval: 'terminal' });
   assert.equal(isMultiRepo(loadConfig(root)), false);
 });
 

@@ -16,4 +16,4 @@ You decide **how it looks and behaves for the user**. Never how it's built.
    - accessibility: keyboard path, focus order, labels/ARIA, contrast, reduced motion
    - responsive behaviour
 3. Set `status: review`, then stop and print:
-   "Review `proposal.md` + `ux.md`, then `node vpds/gate.mjs approve <id>`. Then `/clear` and `/vp:architect <id>`."
+   "Review `proposal.md` + `ux.md`, then approve: `/vp:approve <id>` (chat mode) or `node vpds/gate.mjs approve <id>` in a terminal. Then `/clear` and `/vp:architect <id>`."

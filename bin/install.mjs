@@ -60,7 +60,7 @@ const GITIGNORE_BLOCK = [
  *           repos?: Record<string,string> }} opts  repos: code repos for a multi-repo (planning repo) setup
  * @returns {{ actions: { path: string, action: 'create'|'update'|'unchanged'|'skip'|'merge' , note?: string }[] }}
  */
-export function install(target, { mode = 'init', tools, obsidian = true, force = false, dryRun = false, repos = {} } = {}) {
+export function install(target, { mode = 'init', tools, obsidian = true, force = false, dryRun = false, repos = {}, approval } = {}) {
   const manifestPath = join(target, MANIFEST);
   const hasManifest = existsSync(manifestPath);
   if (mode === 'init' && hasManifest) throw new Error('VPDS is already installed here. Run `npx vpds update` instead.');
@@ -123,7 +123,7 @@ export function install(target, { mode = 'init', tools, obsidian = true, force =
   }
 
   // Multi-repo: vpds.config.json is the source of truth; tool settings are synced from it.
-  syncRepos(target, repos, tools, actions, writes);
+  syncConfig(target, { repos, approval }, tools, actions, writes);
 
   if (!dryRun) {
     for (const [dest, content] of writes) {
@@ -149,26 +149,35 @@ export function parseRepos(spec) {
   return repos;
 }
 
-function syncRepos(target, newRepos, tools, actions, writes) {
+/** Claude Code asks the human before any `gate.mjs approve` runs, in every approval mode. */
+export const APPROVE_ASK_RULES = ['Bash(node vpds/gate.mjs approve:*)', 'Bash(node vpds/gate.mjs approve *)'];
+
+function syncConfig(target, { repos: newRepos, approval }, tools, actions, writes) {
+  if (approval && !['terminal', 'chat'].includes(approval)) throw new Error(`--approval must be terminal or chat (got "${approval}")`);
   const configPath = join(target, 'vpds.config.json');
   const config = readJson(configPath, {});
   const repos = { ...(config.repos ?? {}), ...newRepos };
-  if (!Object.keys(repos).length) return; // single-repo project: nothing to do
+  const next = { ...config, ...(Object.keys(repos).length ? { repos } : {}), ...(approval ? { approval } : {}) };
 
-  const configOld = existsSync(configPath) ? readFileSync(configPath, 'utf8') : '';
-  pushMerge(actions, writes, 'vpds.config.json', configPath, configOld, json({ ...config, repos }));
+  // vpds.config.json only exists once there is something non-default to say.
+  if (Object.keys(next).length) {
+    const old = existsSync(configPath) ? readFileSync(configPath, 'utf8') : '';
+    pushMerge(actions, writes, 'vpds.config.json', configPath, old, json(next));
+  }
 
   if (tools.includes('claude')) {
-    // Claude Code: let the session read and edit the sibling repos.
+    // Claude Code: always ask before approving; let the session reach sibling repos.
     const settingsPath = join(target, '.claude', 'settings.json');
     const settings = readJson(settingsPath, {});
-    const dirs = new Set(settings.permissions?.additionalDirectories ?? []);
-    for (const p of Object.values(repos)) dirs.add(p);
-    const next = { ...settings, permissions: { ...settings.permissions, additionalDirectories: [...dirs] } };
+    const perms = { ...settings.permissions };
+    perms.ask = [...new Set([...(perms.ask ?? []), ...APPROVE_ASK_RULES])];
+    if (Object.keys(repos).length) {
+      perms.additionalDirectories = [...new Set([...(perms.additionalDirectories ?? []), ...Object.values(repos)])];
+    }
     const old = existsSync(settingsPath) ? readFileSync(settingsPath, 'utf8') : '';
-    pushMerge(actions, writes, '.claude/settings.json', settingsPath, old, json(next));
+    pushMerge(actions, writes, '.claude/settings.json', settingsPath, old, json({ ...settings, permissions: perms }));
   }
-  if (tools.includes('cursor')) {
+  if (tools.includes('cursor') && Object.keys(repos).length) {
     // Cursor / VS Code: one multi-root workspace with the planning repo and every code repo.
     const wsPath = join(target, 'vpds.code-workspace');
     const ws = readJson(wsPath, { folders: [{ name: 'planning', path: '.' }] });

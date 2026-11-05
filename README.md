@@ -125,11 +125,23 @@ node vpds/gate.mjs status                   # every open change, its tier, repos
 node vpds/gate.mjs repos                    # single-repo, or each code repo and its current branch
 node vpds/gate.mjs check <id> build         # exit 0 = this persona may start; 1 = blocked, with reasons
 node vpds/gate.mjs approve <id> [files…]    # you only: approves files in review and locks them
+/vp:approve <id>                            # same, from chat (opt-in "chat" approval mode, below)
 ```
 
-- **Human-only approval.** `approve` refuses to run without an interactive terminal (AI tools run commands without one) and asks `[y/N]` before writing.
+- **Human-only approval.** By default, `approve` refuses to run without an interactive terminal (AI tools run commands without one) and asks `[y/N]` before writing.
 - **Edit detection.** Approval stores `approved_hash` for each file and `specs_hash` for the delta specs. If anything changes afterwards, `check` blocks. Ticking task checkboxes doesn't count as a change.
 - **Obsidian-friendly.** Setting `status: approved` by hand still passes, with a warning that the file has no hash lock.
+
+### Approval modes
+
+| Mode | How you approve | What keeps the AI from approving |
+|---|---|---|
+| `terminal` (default) | `node vpds/gate.mjs approve <id>` in your own terminal | AI tools have no interactive terminal, so `approve` refuses |
+| `chat` (opt-in) | Type `/vp:approve <id>`, then click **Allow** on the tool's permission prompt | The command can only be typed by you (`disable-model-invocation`), and every `gate.mjs approve` hits an `ask` rule in `.claude/settings.json` |
+
+Turn on chat mode with `npx vpds init --approval chat` (or `npx vpds update --approval chat`), or set `"approval": "chat"` in `vpds.config.json`. Every approval records `approved_via: terminal | chat`.
+
+**Chat mode is only as strong as the permission prompt.** Don't use it with auto-accept or "bypass permissions" modes, and never choose "always allow" for `gate.mjs approve`. In Cursor, keep "ask before running commands" on. In either mode, an AI that can edit files could still forge the `status:` line by hand; the rules forbid it and the hash lock catches edits made after a real approval.
 
 ## VPDS compared with multi-agent frameworks
 

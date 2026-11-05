@@ -97,3 +97,42 @@ test('CLI approve without an id prints usage', () => {
   const { root } = makeRepo({});
   assert.throws(() => run(root, 'approve'), (e) => e.status === 1 && /Usage:/.test(e.stderr));
 });
+
+// ---------- approval modes (CLI runs without a TTY, like an AI tool) ----------
+
+const chatRepo = (approval) => {
+  const repo = makeRepo({ x: { 'proposal.md': { status: 'review' } } });
+  if (approval) writeFileSync(join(repo.root, 'vpds.config.json'), JSON.stringify({ approval }));
+  return repo;
+};
+
+test('terminal mode (default): --yes from an AI tool is refused, with a hint about chat mode', () => {
+  const { root, base } = chatRepo();
+  assert.throws(() => run(root, 'approve', 'x', '--yes'), (e) => e.status === 1 && /interactive terminal[\s\S]*"approval": "chat"/.test(e.stderr));
+  assert.equal(read(base, 'x', 'proposal.md').meta.status, 'review');
+});
+
+test('chat mode: approve without --yes from an AI tool is still refused', () => {
+  const { root, base } = chatRepo('chat');
+  assert.throws(() => run(root, 'approve', 'x'), (e) => e.status === 1 && /needs --yes[\s\S]*\/vp:approve/.test(e.stderr));
+  assert.equal(read(base, 'x', 'proposal.md').meta.status, 'review');
+});
+
+test('chat mode: approve --yes works and records approved_via: chat', () => {
+  const { root, base } = chatRepo('chat');
+  assert.match(run(root, 'approve', 'x', '--yes'), /Approved: proposal\.md/);
+  const { meta } = read(base, 'x', 'proposal.md');
+  assert.equal(meta.status, 'approved');
+  assert.equal(meta.approved_via, 'chat');
+});
+
+test('chat mode: --yes can come before the file names', () => {
+  const { root, base } = chatRepo('chat');
+  run(root, 'approve', 'x', '--yes', 'proposal');
+  assert.equal(read(base, 'x', 'proposal.md').meta.status, 'approved');
+});
+
+test('an invalid approval mode in vpds.config.json is reported', () => {
+  const { root } = chatRepo('yolo');
+  assert.throws(() => run(root, 'approve', 'x', '--yes'), (e) => e.status === 1 && /approval must be one of terminal, chat/.test(e.stderr));
+});

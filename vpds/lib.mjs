@@ -149,7 +149,7 @@ function toPhaseFile(name) {
  * Default: every file currently in `review`. Pass `files` to approve specific ones.
  * @returns {string[]} names of the files approved
  */
-export function approveChange(change, { by, date, files }) {
+export function approveChange(change, { by, date, files, via }) {
   let targets;
   if (files && files.length) {
     targets = files.map(toPhaseFile);
@@ -162,6 +162,7 @@ export function approveChange(change, { by, date, files }) {
   for (const f of targets) {
     const doc = change.files[f];
     const updates = { status: 'approved', approved_by: by, approved_at: date, approved_hash: bodyHash(doc.body) };
+    if (via) updates.approved_via = via;
     if (f === 'design.md') updates.specs_hash = specsHash(change.dir);
     writeFileSync(doc.path, setMeta(readFileSync(doc.path, 'utf8'), updates));
   }
@@ -259,10 +260,14 @@ import { resolve } from 'node:path';
 
 export const CONFIG_FILE = 'vpds.config.json';
 
+/** terminal: approve only from an interactive terminal (default).
+ *  chat: also allow `approve --yes` from the AI tool, behind its permission prompt (/vp:approve). */
+export const APPROVAL_MODES = ['terminal', 'chat'];
+
 /** @returns {{ repos: Record<string,string> }} repo name → path (relative to the project root) */
 export function loadConfig(root = '.') {
   const path = join(root, CONFIG_FILE);
-  if (!existsSync(path)) return { repos: {} };
+  if (!existsSync(path)) return { repos: {}, approval: 'terminal' };
   let config;
   try {
     config = JSON.parse(readFileSync(path, 'utf8'));
@@ -274,7 +279,11 @@ export function loadConfig(root = '.') {
     if (!/^[\w-]+$/.test(name)) throw new Error(`${CONFIG_FILE}: repo name "${name}" must be letters, digits, - or _`);
     if (typeof p !== 'string' || !p) throw new Error(`${CONFIG_FILE}: repo "${name}" needs a path string`);
   }
-  return { ...config, repos };
+  const approval = config.approval ?? 'terminal';
+  if (!APPROVAL_MODES.includes(approval)) {
+    throw new Error(`${CONFIG_FILE}: approval must be one of ${APPROVAL_MODES.join(', ')} (got "${approval}")`);
+  }
+  return { ...config, repos, approval };
 }
 
 export const isMultiRepo = (config) => Object.keys(config?.repos ?? {}).length > 0;

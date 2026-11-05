@@ -14,6 +14,9 @@ Options:
   --tools claude,cursor   which AI tools to install commands for (default: both)
   --repos a=../a,b=../b   multi-repo: this folder is the planning repo for these code repos
                           (written to vpds.config.json; edit it later and run update to resync)
+  --approval terminal|chat  terminal (default): approve only from a real terminal.
+                          chat: also allow /vp:approve in Claude Code / Cursor, confirmed by the
+                          tool's permission prompt (don't combine with auto-accept modes)
   --no-obsidian           skip the Obsidian dashboard, canvas and vault settings
   --no-openspec           don't run \`openspec init\` (init only)
   --force                 replace files you've edited
@@ -30,6 +33,8 @@ function parse(argv) {
     else if (a.startsWith('--tools=')) opts.tools = a.slice(8).split(',').map((s) => s.trim()).filter(Boolean);
     else if (a === '--repos') opts.repos = parseRepos(argv[++i]);
     else if (a.startsWith('--repos=')) opts.repos = parseRepos(a.slice(8));
+    else if (a === '--approval') opts.approval = argv[++i];
+    else if (a.startsWith('--approval=')) opts.approval = a.slice(11);
     else if (a === '--no-obsidian') opts.obsidian = false;
     else if (a === '--no-openspec') opts.openspec = false;
     else if (a === '--force') opts.force = true;

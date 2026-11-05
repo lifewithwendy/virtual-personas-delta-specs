@@ -201,7 +201,7 @@ test('CLI with no command prints usage and exits 1', () => {
 
 // ---------- multi-repo ----------
 
-import { parseRepos } from './install.mjs';
+import { parseRepos, APPROVE_ASK_RULES } from './install.mjs';
 const REPOS = { api: '../api', web: '../web' };
 
 test('parseRepos reads name=path pairs and normalises backslashes', () => {
@@ -209,10 +209,11 @@ test('parseRepos reads name=path pairs and normalises backslashes', () => {
   assert.throws(() => parseRepos('api'), /expected name=path/);
 });
 
-test('single-repo init writes no config, workspace or Claude settings', () => {
+test('single-repo init writes no config or workspace; Claude settings only hold the approve ask rule', () => {
   const dir = project();
   install(dir, { mode: 'init' });
-  for (const f of ['vpds.config.json', 'vpds.code-workspace', '.claude/settings.json']) assert.ok(!existsSync(join(dir, f)), f);
+  for (const f of ['vpds.config.json', 'vpds.code-workspace']) assert.ok(!existsSync(join(dir, f)), f);
+  assert.deepEqual(JSON.parse(read(dir, '.claude/settings.json')), { permissions: { ask: APPROVE_ASK_RULES } });
 });
 
 test('multi-repo init writes config, Claude additionalDirectories and a code-workspace', () => {
@@ -265,4 +266,39 @@ test('CLI init --repos sets up a planning repo whose gate sees the repos', () =>
 test('CLI rejects a malformed --repos value', () => {
   assert.throws(() => execFileSync(process.execPath, [CLI, 'init', project(), '--repos', 'oops'], { stdio: 'pipe' }),
     (e) => e.status === 1 && /expected name=path/.test(e.stderr));
+});
+
+// ---------- approval mode ----------
+
+test('--approval chat writes the mode to vpds.config.json; default writes nothing', () => {
+  const dir = project();
+  install(dir, { mode: 'init', approval: 'chat' });
+  assert.deepEqual(JSON.parse(read(dir, 'vpds.config.json')), { approval: 'chat' });
+});
+
+test('approval mode and repos live together, and update can switch the mode', () => {
+  const dir = project();
+  install(dir, { mode: 'init', repos: REPOS });
+  install(dir, { mode: 'update', approval: 'chat' });
+  assert.deepEqual(JSON.parse(read(dir, 'vpds.config.json')), { repos: REPOS, approval: 'chat' });
+});
+
+test('the approve ask rule is merged into existing Claude permissions, once', () => {
+  const dir = project();
+  mkdirSync(join(dir, '.claude'), { recursive: true });
+  writeFileSync(join(dir, '.claude/settings.json'), JSON.stringify({ permissions: { ask: ['Bash(git push:*)'] } }));
+  install(dir, { mode: 'init' });
+  install(dir, { mode: 'update' });
+  assert.deepEqual(JSON.parse(read(dir, '.claude/settings.json')).permissions.ask, ['Bash(git push:*)', ...APPROVE_ASK_RULES]);
+});
+
+test('/vp:approve is installed and cannot be invoked by the model', () => {
+  const dir = project();
+  install(dir, { mode: 'init' });
+  assert.match(read(dir, '.claude/commands/vp/approve.md'), /^disable-model-invocation: true$/m);
+  assert.ok(existsSync(join(dir, '.cursor/commands/vp-approve.md')));
+});
+
+test('an invalid --approval value is rejected', () => {
+  assert.throws(() => install(project(), { mode: 'init', approval: 'yolo' }), /terminal or chat/);
 });

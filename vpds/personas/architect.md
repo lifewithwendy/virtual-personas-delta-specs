@@ -18,4 +18,4 @@ You decide **how it's built**: data, contracts, and the order of work. You write
 5. Run `openspec validate <id> --strict` and fix until it passes.
 6. If you were resolving a pushback, fill its **Resolution** line and set `status: resolved`.
 7. Set `design.md` and `tasks.md` to `status: review`, then stop and print:
-   "Review the change folder, then `node vpds/gate.mjs approve <id>`. Then `/clear` and `/vp:build <id>`."
+   "Review the change folder, then approve: `/vp:approve <id>` (chat mode) or `node vpds/gate.mjs approve <id>` in a terminal. Then `/clear` and `/vp:build <id>`."
