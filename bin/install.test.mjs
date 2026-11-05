@@ -315,3 +315,10 @@ test('init adds a scoped LF block to .gitattributes and keeps existing lines', (
   assert.match(text, /^\*\.png binary\n\n# vpds:start\nopenspec\/\*\* text eol=lf\nvpds\/\*\* text eol=lf\nAGENTS\.md text eol=lf\n# vpds:end\n$/);
   assert.doesNotMatch(text, /^\* text/m); // never touches the project's own code
 });
+
+test('design, architect and build run in a fresh subagent in Claude Code; pm, approve and finish do not', () => {
+  const dir = project();
+  install(dir, { mode: 'init' });
+  for (const c of ['design', 'architect', 'build']) assert.match(read(dir, `.claude/commands/vp/${c}.md`), /^context: fork$/m, c);
+  for (const c of ['pm', 'approve', 'finish']) assert.doesNotMatch(read(dir, `.claude/commands/vp/${c}.md`), /^context: fork$/m, c);
+});

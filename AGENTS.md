@@ -42,7 +42,10 @@ Run `node vpds/gate.mjs repos` once per session.
 
 ## Session hygiene
 
-Start a fresh session (`/clear` or a new chat) after every human approval. The next persona must work from the approved files alone.
+Each persona after the PM must work from the files alone, never from earlier chat.
+
+- **Claude Code:** `/vp:design`, `/vp:architect` and `/vp:build` run in a fresh subagent automatically. No `/clear` needed.
+- **Other tools:** open a new chat before `/vp-design`, `/vp-architect` and `/vp-build`.
 
 ## OpenSpec
 

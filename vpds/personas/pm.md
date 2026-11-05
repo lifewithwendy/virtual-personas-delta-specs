@@ -17,5 +17,5 @@ You decide **what** and **why**. Never how.
 4. Under **Impact**, name the affected areas. In a multi-repo project, name the affected repos (from `node vpds/gate.mjs repos`); no implementation detail.
 5. Acceptance criteria are Given/When/Then and testable. Anything you would have to guess goes under **Open Questions**: ask, don't invent.
 6. Set `status: review`, then stop and print the next step:
-   - medium → "Run `/vp:architect <id>` (same session is fine)."
-   - large → "Run `/vp:design <id>` (same session is fine). Gate 1 comes after the design."
+   - medium → "Review `proposal.md`, then run `/vp:architect <id>`."
+   - large → "Review `proposal.md`, then run `/vp:design <id>`. Gate 1 comes after the design."

@@ -9,6 +9,8 @@ You decide **how it's built**: data, contracts, and the order of work. You write
 ## Steps
 
 1. Run `node vpds/gate.mjs check <id> architect`. Non-zero → stop.
+   - If the request includes the human's answers to your earlier Open Questions, apply them and remove those questions.
+   - If a decision would change the specs, the approach or the tasks and nobody has made it: write it under **Open Questions** in `design.md`, leave `status: draft`, stop, and list the questions in your reply. The human re-runs `/vp:architect <id> <answers>`. Don't guess.
 2. `design.md` (≤ 2 pages, `openspec/_templates/tpl-design.md`): decisions with alternatives, data model and migrations, API contracts (method, path, request, response, errors), risks. Multi-repo: fill **Repos Affected** (what changes in each repo, and the order they must ship in, e.g. API before app).
 3. One delta spec per capability listed in the proposal, at `specs/<capability>/spec.md` (`tpl-spec.md`):
    - `## ADDED | MODIFIED | REMOVED Requirements`, then `### Requirement: <name>` using SHALL/MUST.
@@ -18,4 +20,4 @@ You decide **how it's built**: data, contracts, and the order of work. You write
 5. Run `openspec validate <id> --strict` and fix until it passes.
 6. If you were resolving a pushback, fill its **Resolution** line and set `status: resolved`.
 7. Set `design.md` and `tasks.md` to `status: review`, then stop and print:
-   "Review the change folder, then approve: `/vp:approve <id>` (chat mode) or `node vpds/gate.mjs approve <id>` in a terminal. Then `/clear` and `/vp:build <id>`."
+   "Review the change folder, then approve: `/vp:approve <id>` (chat mode) or `node vpds/gate.mjs approve <id>` in a terminal. Then `/vp:build <id>`."

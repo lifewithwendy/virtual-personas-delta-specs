@@ -21,7 +21,7 @@ Multi-agent frameworks such as BMAD and CrewAI separate roles well, but they cos
 
 VPDS keeps the part that matters (**each role only does its own job, and you sign off between them**) and cuts the rest:
 
-- **One context at a time.** A fresh session after each gate means each persona reads only the approved files, never the previous persona's chat.
+- **One context at a time.** In Claude Code, the Designer, Architect and Developer each run in a fresh subagent (`context: fork`): they read only the files, never earlier chat, and their long transcripts never pile up in your main session. No `/clear` needed.
 - **Short personas, loaded on demand.** Each persona is about 150–300 words and is loaded only by its own slash command.
 - **Delta specs.** Personas read the change folder and only the specs it touches (OpenSpec), not the whole spec tree.
 - **Tiers.** Small changes skip straight to the Developer; only large ones use all four personas.
@@ -106,9 +106,9 @@ Why one planning repo instead of VPDS in every repo? A feature that touches the 
 |---|---|---|
 | 1 | `/vp:pm <idea>` | PM creates the change and writes `proposal.md` with a **tier** |
 | 2 | `/vp:design <id>` *(large only)* | Designer writes `ux.md`: flows, wireframes, states, a11y |
-| 🚦 | `node vpds/gate.mjs approve <id>` *(large)*, then `/clear` | Gate 1 |
+| 🚦 | `/vp:approve <id>` or `node vpds/gate.mjs approve <id>` *(large)* | Gate 1 |
 | 3 | `/vp:architect <id>` | Architect writes `design.md`, delta specs and `tasks.md`; must pass `openspec validate --strict` |
-| 🚦 | `node vpds/gate.mjs approve <id>`, then `/clear` | Gate 2: every file is locked with a hash |
+| 🚦 | `/vp:approve <id>` or `node vpds/gate.mjs approve <id>` | Gate 2: every file is locked with a hash |
 | 4 | `/vp:build <id>` | Developer runs `gate.mjs check`, then for each task: failing test → code → refactor → tick |
 | 5 | `/vp:finish <id>` or `node vpds/gate.mjs finish <id>` | Merges `feat/<id>` into main in every repo the change touched, archives it (delta specs merge into `openspec/specs/`), commits the planning repo. Never pushes. |
 

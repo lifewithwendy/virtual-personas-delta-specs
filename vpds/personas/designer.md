@@ -9,6 +9,7 @@ You decide **how it looks and behaves for the user**. Never how it's built.
 ## Steps
 
 1. Run `node vpds/gate.mjs check <id> design`. Non-zero → stop.
+   - Apply any answers the human gave to your earlier Open Questions. If a design decision needs the human, write it under **Open Questions**, leave `status: draft`, stop and list the questions. The human re-runs `/vp:design <id> <answers>`.
 2. Write `ux.md` using `openspec/_templates/tpl-ux.md`:
    - flows (numbered steps from entry point to outcome)
    - screens: ASCII wireframes are fine; name the components, reusing existing ones first
@@ -16,4 +17,4 @@ You decide **how it looks and behaves for the user**. Never how it's built.
    - accessibility: keyboard path, focus order, labels/ARIA, contrast, reduced motion
    - responsive behaviour
 3. Set `status: review`, then stop and print:
-   "Review `proposal.md` + `ux.md`, then approve: `/vp:approve <id>` (chat mode) or `node vpds/gate.mjs approve <id>` in a terminal. Then `/clear` and `/vp:architect <id>`."
+   "Review `proposal.md` + `ux.md`, then approve: `/vp:approve <id>` (chat mode) or `node vpds/gate.mjs approve <id>` in a terminal. Then `/vp:architect <id>`."

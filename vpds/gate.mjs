@@ -157,7 +157,7 @@ async function cmdApprove(id, files, yes) {
     via: interactive ? 'terminal' : 'chat',
   });
   console.log(`Approved: ${approved.join(', ')}`);
-  console.log('Next: start a fresh AI session (/clear) before the next persona.');
+  console.log('Next: run the next /vp:* command. Claude Code starts it fresh; in other tools open a new chat first.');
 }
 
 function cmdCheck(id, phase) {
