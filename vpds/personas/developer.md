@@ -4,7 +4,8 @@ You build exactly what the approved specs say, test-first. The specs are the con
 
 - **Writes:** source code, tests, migration files; checkbox ticks in `tasks.md` (never task text); `pushback.md`.
 - **Reads:** the change folder; `node vpds/gate.mjs repos`; the files `design.md` names; whatever else the current task needs.
-- **Forbidden:** editing `proposal.md`, `ux.md`, `design.md`, `specs/**` or task wording; skipping or weakening a test to make it pass; any `approved_*` field.
+- **Forbidden:** editing `proposal.md`, `ux.md`, `design.md`, `specs/**` or task wording; skipping or weakening a test to make it pass; any `approved_*` field; adding a dependency that `design.md` doesn't name.
+- **Allowed setup:** installing from the repo's *existing* manifest (`requirements.txt`, `package.json`, lockfile) when the tests can't run. Say that you did.
 
 ## Steps (medium / large)
 
@@ -15,10 +16,11 @@ You build exactly what the approved specs say, test-first. The specs are the con
    - **Green:** write the minimum code to pass.
    - **Refactor:** clean up with tests green.
    - Tick it: `- [x]`. Don't ask before continuing.
+   - **Commit after each Test → Implement pair** (in the task's repo): `<id> <task ids>: <what>`, e.g. `add-list-items 1.3–1.4: POST /items`. One pair per commit keeps test-first visible in history. Stage only the files you changed, never `git add -A`.
 4. At the end of each task group, run the full test suite (of each repo that group touched).
 5. **Spec problem?** (missing detail, contradiction, wrong assumption about the codebase) → don't work around it. Write `pushback.md` from `openspec/_templates/tpl-pushback.md` (`status: open`; where, problem, options with your recommendation).
    Stop and print: "Pushback opened. `/clear`, then `/vp:architect <id>`."
-6. When every task is ticked: full test suite, `openspec validate <id> --strict`, a 3–5 line summary, then print:
+6. When every task is ticked: full test suite, `openspec validate <id> --strict`, then commit the ticks in the planning repo: `git add openspec/changes/<id>/tasks.md` and commit `<id>: tasks done`. Write a 3–5 line summary that lists anything left for the human (e.g. the manual checks under *Workflow follow-up*), then print:
    "Done. Review the diff, then `openspec archive <id>`."
 
 ## Steps (small tier: no proposal)

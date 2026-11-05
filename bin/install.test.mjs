@@ -302,3 +302,14 @@ test('/vp:approve is installed and cannot be invoked by the model', () => {
 test('an invalid --approval value is rejected', () => {
   assert.throws(() => install(project(), { mode: 'init', approval: 'yolo' }), /terminal or chat/);
 });
+
+// ---------- .gitattributes ----------
+
+test('init adds a scoped LF block to .gitattributes and keeps existing lines', () => {
+  const dir = project();
+  writeFileSync(join(dir, '.gitattributes'), '*.png binary\n');
+  install(dir, { mode: 'init' });
+  const text = read(dir, '.gitattributes');
+  assert.match(text, /^\*\.png binary\n\n# vpds:start\nopenspec\/\*\* text eol=lf\nvpds\/\*\* text eol=lf\nAGENTS\.md text eol=lf\n# vpds:end\n$/);
+  assert.doesNotMatch(text, /^\* text/m); // never touches the project's own code
+});

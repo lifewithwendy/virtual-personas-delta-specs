@@ -98,6 +98,8 @@ my-product/
 
 Why one planning repo instead of VPDS in every repo? A feature that touches the API and the app stays **one** change with **one** approval, and one place describes the whole behaviour.
 
+> New here? **[docs/GUIDE.md](docs/GUIDE.md)** has the whole workflow on one page.
+
 ## How a change moves
 
 | Step | You run | What happens |

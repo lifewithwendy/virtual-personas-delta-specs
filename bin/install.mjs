@@ -46,6 +46,9 @@ export function upsertBlock(existing, block, start = START, end = END) {
   return text.trim() ? `${text.trimEnd()}\n\n${wrapped}\n` : `${wrapped}\n`;
 }
 
+/** Line endings for VPDS files: hashes ignore CRLF, but LF keeps diffs clean across Windows/macOS/Linux. */
+const GITATTRIBUTES_BLOCK = ['openspec/** text eol=lf', 'vpds/** text eol=lf', 'AGENTS.md text eol=lf'].join('\n');
+
 /** The .gitignore lines VPDS needs. */
 const GITIGNORE_BLOCK = [
   'openspec/.obsidian/workspace*.json',
@@ -121,6 +124,11 @@ export function install(target, { mode = 'init', tools, obsidian = true, force =
     const old = existsSync(giPath) ? readFileSync(giPath, 'utf8') : '';
     pushMerge(actions, writes, '.gitignore', giPath, old, upsertBlock(old, GITIGNORE_BLOCK, GITIGNORE_START, GITIGNORE_END));
   }
+
+  // .gitattributes: LF for VPDS-managed files only (never your code).
+  const gaPath = join(target, '.gitattributes');
+  const gaOld = existsSync(gaPath) ? readFileSync(gaPath, 'utf8') : '';
+  pushMerge(actions, writes, '.gitattributes', gaPath, gaOld, upsertBlock(gaOld, GITATTRIBUTES_BLOCK, GITIGNORE_START, GITIGNORE_END));
 
   // Multi-repo: vpds.config.json is the source of truth; tool settings are synced from it.
   syncConfig(target, { repos, approval }, tools, actions, writes);
