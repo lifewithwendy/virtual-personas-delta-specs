@@ -1,0 +1,5 @@
+node_modules/
+# Obsidian: per-user UI state (changes every time you open a note)
+openspec/.obsidian/workspace*.json
+openspec/.obsidian/cache
+openspec/.trash/

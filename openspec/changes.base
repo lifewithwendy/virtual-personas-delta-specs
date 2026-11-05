@@ -1,0 +1,76 @@
+# VPDS dashboard: every phase file in openspec/changes, by status.
+filters:
+  and:
+    - file.inFolder("changes")
+    - file.hasProperty("status")
+properties:
+  file.folder:
+    displayName: Change
+  persona:
+    displayName: Persona
+  tier:
+    displayName: Tier
+  status:
+    displayName: Status
+  approved_by:
+    displayName: Approved by
+  approved_at:
+    displayName: Approved on
+views:
+  - type: table
+    name: Awaiting review
+    filters:
+      and:
+        - 'status == "review"'
+        - not:
+            - file.inFolder("changes/archive")
+    groupBy:
+      property: file.folder
+      direction: ASC
+    order:
+      - file.name
+      - persona
+      - tier
+      - status
+  - type: kanban
+    name: Pipeline
+    filters:
+      not:
+        - file.inFolder("changes/archive")
+    groupBy:
+      property: note.status
+      direction: ASC
+    groupOrder:
+      - draft
+      - review
+      - approved
+      - open
+      - resolved
+  - type: table
+    name: In flight
+    filters:
+      not:
+        - file.inFolder("changes/archive")
+    groupBy:
+      property: file.folder
+      direction: ASC
+    order:
+      - file.name
+      - persona
+      - tier
+      - status
+      - approved_by
+      - approved_at
+  - type: table
+    name: Archived
+    filters:
+      and:
+        - file.inFolder("changes/archive")
+    groupBy:
+      property: file.folder
+      direction: DESC
+    order:
+      - file.name
+      - persona
+      - approved_by
+      - approved_at

@@ -1,0 +1,210 @@
+{
+  "nodes": [
+    {
+      "id": "g1",
+      "type": "group",
+      "x": -40,
+      "y": -60,
+      "width": 440,
+      "height": 640,
+      "label": "Phase 1 \u00b7 What",
+      "color": "6"
+    },
+    {
+      "id": "g2",
+      "type": "group",
+      "x": 760,
+      "y": -60,
+      "width": 440,
+      "height": 640,
+      "label": "Phase 2 \u00b7 How",
+      "color": "5"
+    },
+    {
+      "id": "g3",
+      "type": "group",
+      "x": 1560,
+      "y": -60,
+      "width": 440,
+      "height": 640,
+      "label": "Phase 3 \u00b7 Build",
+      "color": "4"
+    },
+    {
+      "id": "intro",
+      "type": "text",
+      "x": -40,
+      "y": -340,
+      "width": 2340,
+      "height": 220,
+      "text": "# VPDS pipeline\nOne AI, four personas, files as the only hand-off. **Fresh session after every \ud83d\udea6.**\nDashboard: [[changes.base]] \u00b7 Duplicate this canvas per change and drag that change's files next to each card.\nCheck any time: `node vpds/gate.mjs status`"
+    },
+    {
+      "id": "pm",
+      "type": "text",
+      "x": 0,
+      "y": 0,
+      "width": 360,
+      "height": 240,
+      "text": "## \ud83e\udded PM\n`/vp:pm <idea>`\n\n\u2192 `proposal.md`\nWhy \u00b7 what \u00b7 acceptance criteria\nSets **tier**: small \u00b7 medium \u00b7 large",
+      "color": "6"
+    },
+    {
+      "id": "ux",
+      "type": "text",
+      "x": 0,
+      "y": 300,
+      "width": 360,
+      "height": 240,
+      "text": "## \ud83c\udfa8 Designer *(large only)*\n`/vp:design <id>`\n\n\u2192 `ux.md`\nFlows \u00b7 screens \u00b7 states \u00b7 a11y",
+      "color": "6"
+    },
+    {
+      "id": "gate1",
+      "type": "text",
+      "x": 440,
+      "y": 170,
+      "width": 280,
+      "height": 220,
+      "text": "## \ud83d\udea6 Gate 1 *(large)*\n```\nnode vpds/gate.mjs approve <id>\n```\nApproves proposal + ux, then `/clear`",
+      "color": "1"
+    },
+    {
+      "id": "arch",
+      "type": "text",
+      "x": 800,
+      "y": 60,
+      "width": 360,
+      "height": 400,
+      "text": "## \ud83c\udfdb Architect\n`/vp:architect <id>`\n\n\u2192 `design.md`\nDecisions \u00b7 data \u00b7 migrations \u00b7 API\n\n\u2192 `specs/<capability>/spec.md`\nDelta requirements + scenarios\n\n\u2192 `tasks.md`\nTest \u2192 Implement pairs\n\nMust pass `openspec validate <id> --strict`",
+      "color": "5"
+    },
+    {
+      "id": "gate2",
+      "type": "text",
+      "x": 1240,
+      "y": 170,
+      "width": 280,
+      "height": 220,
+      "text": "## \ud83d\udea6 Gate 2 *(medium + large)*\n```\nnode vpds/gate.mjs approve <id>\n```\nLocks every file with a hash, then `/clear`",
+      "color": "1"
+    },
+    {
+      "id": "build",
+      "type": "text",
+      "x": 1600,
+      "y": 60,
+      "width": 360,
+      "height": 400,
+      "text": "## \ud83e\uddea Developer / QA\n`/vp:build <id>`\n\nFirst: `gate.mjs check <id> build`\n\nPer task:\n\ud83d\udd34 failing test \u2192 \ud83d\udfe2 minimum code \u2192 \u267b refactor \u2192 \u2705 tick\n\nNever edits specs.",
+      "color": "4"
+    },
+    {
+      "id": "archive",
+      "type": "text",
+      "x": 2040,
+      "y": 170,
+      "width": 260,
+      "height": 220,
+      "text": "## \ud83d\udce6 Archive\nReview the diff, then\n```\nopenspec archive <id>\n```\nDeltas merge into `specs/`",
+      "color": "3"
+    },
+    {
+      "id": "pushback",
+      "type": "text",
+      "x": 1240,
+      "y": 640,
+      "width": 360,
+      "height": 200,
+      "text": "## \u21a9 Pushback\nSpec gap found while building \u2192\n`pushback.md` (`status: open`)\nBlocks build until the Architect resolves it and you approve again",
+      "color": "2"
+    },
+    {
+      "id": "small",
+      "type": "text",
+      "x": 0,
+      "y": 640,
+      "width": 400,
+      "height": 200,
+      "text": "## \u26a1 Small tier\n`/vp:build \"fix \u2026\"`\nDeveloper writes a 1\u20133 task `tasks.md` + `skip_specs: true`.\nNo gates: review the diff.",
+      "color": "3"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-pm-ux",
+      "fromNode": "pm",
+      "fromSide": "bottom",
+      "toNode": "ux",
+      "toSide": "top",
+      "label": "large"
+    },
+    {
+      "id": "e-ux-gate1",
+      "fromNode": "ux",
+      "fromSide": "right",
+      "toNode": "gate1",
+      "toSide": "left"
+    },
+    {
+      "id": "e-gate1-arch",
+      "fromNode": "gate1",
+      "fromSide": "right",
+      "toNode": "arch",
+      "toSide": "left"
+    },
+    {
+      "id": "e-pm-arch",
+      "fromNode": "pm",
+      "fromSide": "right",
+      "toNode": "arch",
+      "toSide": "top",
+      "label": "medium"
+    },
+    {
+      "id": "e-arch-gate2",
+      "fromNode": "arch",
+      "fromSide": "right",
+      "toNode": "gate2",
+      "toSide": "left"
+    },
+    {
+      "id": "e-gate2-build",
+      "fromNode": "gate2",
+      "fromSide": "right",
+      "toNode": "build",
+      "toSide": "left"
+    },
+    {
+      "id": "e-build-archive",
+      "fromNode": "build",
+      "fromSide": "right",
+      "toNode": "archive",
+      "toSide": "left"
+    },
+    {
+      "id": "e-build-pushback",
+      "fromNode": "build",
+      "fromSide": "bottom",
+      "toNode": "pushback",
+      "toSide": "right",
+      "label": "spec gap"
+    },
+    {
+      "id": "e-pushback-arch",
+      "fromNode": "pushback",
+      "fromSide": "left",
+      "toNode": "arch",
+      "toSide": "bottom",
+      "label": "resolve"
+    },
+    {
+      "id": "e-small-build",
+      "fromNode": "small",
+      "fromSide": "right",
+      "toNode": "build",
+      "toSide": "bottom",
+      "label": "small"
+    }
+  ]
+}
