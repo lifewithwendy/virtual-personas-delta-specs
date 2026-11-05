@@ -1,14 +1,43 @@
 {
-  "name": "virtual-personas-delta-specs",
+  "name": "vpds",
   "version": "0.1.0",
   "description": "One AI, four personas, delta specs and human gates: a lightweight alternative to multi-agent dev frameworks.",
-  "private": true,
-  "type": "module",
+  "keywords": [
+    "ai",
+    "agents",
+    "spec-driven-development",
+    "openspec",
+    "claude-code",
+    "cursor",
+    "tdd",
+    "obsidian"
+  ],
   "license": "MIT",
   "author": "Wendt Edmund",
-  "engines": { "node": ">=20.11" },
+  "type": "module",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "bin": {
+    "vpds": "bin/vpds.mjs"
+  },
+  "files": [
+    "bin/vpds.mjs",
+    "bin/install.mjs",
+    "vpds/personas/",
+    "vpds/gate.mjs",
+    "vpds/lib.mjs",
+    "openspec/_templates/",
+    "openspec/changes.base",
+    "openspec/pipeline.canvas",
+    "openspec/.obsidian/templates.json",
+    "openspec/.obsidian/app.json",
+    ".claude/commands/vp/",
+    ".cursor/commands/vp-*.md",
+    "AGENTS.md"
+  ],
   "scripts": {
-    "test": "node --test \"vpds/*.test.mjs\"",
+    "test": "node --test \"vpds/*.test.mjs\" \"bin/*.test.mjs\"",
     "gate": "node vpds/gate.mjs"
   }
 }

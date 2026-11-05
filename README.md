@@ -39,7 +39,8 @@ VPDS keeps the part that matters (**each role only does its own job, and you sig
 │   ├── personas/                # pm.md · designer.md · architect.md · developer.md
 │   ├── gate.mjs                 # status · approve · check (zero dependencies)
 │   ├── lib.mjs                  # frontmatter, hashing, phase rules
-│   └── *.test.mjs               # 66 tests, including end-to-end with the OpenSpec CLI
+│   └── *.test.mjs               # gate tests, including end-to-end with the OpenSpec CLI
+├── bin/vpds.mjs                 # npx vpds init | update (+ install.test.mjs)
 └── openspec/                    # ← also the Obsidian vault
     ├── config.yaml              # from `openspec init`
     ├── specs/                   # living specs (source of truth)
@@ -52,24 +53,22 @@ VPDS keeps the part that matters (**each role only does its own job, and you sig
 
 ## Quickstart
 
-Requires Node 20.11 or later and git.
+Requires Node 20.11 or later. Works with any project language; Node is only needed for the gate scripts.
 
 ```bash
-# 1. Get the framework into your project
-#    New project: clone this repo. Existing project: copy AGENTS.md, CLAUDE.md, .claude/commands/vp,
-#    .cursor/commands, vpds/ and the openspec/ files above (merge AGENTS.md/CLAUDE.md if you have them).
-git clone https://github.com/<you>/virtual-personas-delta-specs my-project && cd my-project
-
-# 2. Install OpenSpec and set it up for your tools
+# 1. Install OpenSpec (once per machine)
 npm i -g @fission-ai/openspec
-openspec init --tools claude,cursor
 
-# 3. Check everything works
-npm test
+# 2. Add VPDS to your project (run in the project root)
+npx vpds init                    # or: npx vpds init --tools claude   (claude | cursor)
 
-# 4. Start your first change (in Claude Code; Cursor uses /vp-pm)
+# 3. Start your first change (in Claude Code; Cursor uses /vp-pm)
 /vp:pm Users want to export invoices as CSV for their accountant
 ```
+
+`init` copies the kit, adds a managed block to your `AGENTS.md`, makes `CLAUDE.md` import it, adds the Obsidian lines to `.gitignore`, and runs `openspec init`. It never overwrites a file that already exists. Use `--dry-run` to preview and `--no-obsidian` to skip the vault files.
+
+**Updating:** `npx vpds update` refreshes personas, commands, templates and gate scripts. Every installed file is recorded in `.vpds.json`; **files you've edited are skipped** (use `--force` to replace them), and `openspec/specs` and `openspec/changes` are never touched. Commit `.vpds.json` along with the rest.
 
 **Optional: Obsidian.** Choose *Open folder as vault* and pick the `openspec/` folder. In Settings → Core plugins, turn on **Templates**, **Bases** and **Canvas**. Open `changes.base` to see what's waiting for your review.
 
@@ -128,7 +127,6 @@ node vpds/gate.mjs approve <id> [files…]    # you only: approves files in revi
 
 ## Roadmap
 
-- `npx vpds init` installer for existing projects
 - Command wrappers for Roo Code, GitHub Copilot and Windsurf
 - Optional pre-commit hook: block code commits while a change's gate is closed
 - Published token benchmarks
