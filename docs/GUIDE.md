@@ -3,7 +3,8 @@
 ## Once per project
 
 1. **Install OpenSpec** (once per machine): `npm i -g @fission-ai/openspec`
-2. **Add VPDS**, in the repo (single repo) or in a planning repo next to your code repos:
+2. **Add VPDS**, in the repo (single repo) or in a planning repo next to your code repos.
+   Until VPDS is on npm, use `npx github:lifewithwendy/virtual-personas-delta-specs` in place of `npx vpds`:
    ```bash
    npx vpds init                                        # single repo
    npx vpds init --repos api=../api,web=../web          # several repos

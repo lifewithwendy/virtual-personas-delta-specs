@@ -1,6 +1,12 @@
 # Virtual Personas over Delta Specs (VPDS)
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Node ≥ 20.11](https://img.shields.io/badge/node-%E2%89%A5%2020.11-brightgreen.svg)
+![Status: early](https://img.shields.io/badge/status-early%20(v0.1)-orange.svg)
+
 **One AI, four personas, delta specs, and human gates.** You get the role separation of a multi-agent framework without the agents.
+
+> **Status: early (v0.1).** VPDS works end to end (gates, approvals, multi-repo builds, `finish`) and has been run on one multi-repo prototype. Expect rough edges and changes to the personas and templates. Feedback and issues are very welcome.
 
 VPDS runs inside the AI coding tool you already use (Claude Code or Cursor). The single AI switches between four tightly scoped personas (**PM → Designer → Architect → Developer/QA**). Each persona writes one kind of file into an [OpenSpec](https://github.com/Fission-AI/OpenSpec) change folder, and **a small script blocks the next persona until you approve the previous phase.**
 
@@ -60,11 +66,13 @@ Requires Node 20.11 or later. Works with any project language; Node is only need
 npm i -g @fission-ai/openspec
 
 # 2. Add VPDS to your project (run in the project root)
-npx vpds init                    # or: npx vpds init --tools claude   (claude | cursor)
+npx github:lifewithwendy/virtual-personas-delta-specs init    # or add --tools claude (claude | cursor)
 
 # 3. Start your first change (in Claude Code; Cursor uses /vp-pm)
 /vp:pm Users want to export invoices as CSV for their accountant
 ```
+
+**Shorter command coming:** once VPDS is on npm, `npx vpds init` will do the same. Until then, use `npx github:lifewithwendy/virtual-personas-delta-specs` wherever this README says `npx vpds`.
 
 `init` copies the kit, adds a managed block to your `AGENTS.md`, makes `CLAUDE.md` import it, adds the Obsidian lines to `.gitignore`, and runs `openspec init`. It never overwrites a file that already exists. Use `--dry-run` to preview and `--no-obsidian` to skip the vault files.
 
