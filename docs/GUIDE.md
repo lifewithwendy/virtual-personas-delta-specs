@@ -17,7 +17,7 @@
 
 | Step | You type | You do |
 |---|---|---|
-| 0. Think it through *(optional)* | `/vp:explore <rough idea>` | Talk it over. It writes nothing and ends with the `/vp:pm …` line to run. |
+| 0. Think it through *(optional)* | `/vp:explore <rough idea>` (or just `/vp:explore` for ideas) | Talk it over. It looks around the repos first, writes nothing, and ends with the `/vp:pm …` line to run. |
 | 1. Describe it | `/vp:pm <the feature in one sentence>` | Answer its questions. It picks the tier. |
 | 2. Design it *(large only)* | `/vp:design <id>` | |
 | 3. Plan it | `/vp:architect <id>` | |

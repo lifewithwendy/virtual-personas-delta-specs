@@ -332,3 +332,11 @@ test('/vp:explore is installed, runs in the main session, and its persona writes
   assert.match(read(dir, 'vpds/personas/explorer.md'), /\*\*Writes:\*\* nothing/);
   assert.ok(existsSync(join(dir, '.cursor/commands/vp-explore.md')));
 });
+
+test('explorer orients on the repos first and handles a missing idea', () => {
+  const dir = project();
+  install(dir, { mode: 'init' });
+  const p = read(dir, 'vpds/personas/explorer.md');
+  assert.match(p, /\*\*Orient first/);
+  assert.match(p, /\*\*No idea given\?\*\*/);
+});
