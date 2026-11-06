@@ -322,3 +322,13 @@ test('design, architect and build run in a fresh subagent in Claude Code; pm, ap
   for (const c of ['design', 'architect', 'build']) assert.match(read(dir, `.claude/commands/vp/${c}.md`), /^context: fork$/m, c);
   for (const c of ['pm', 'approve', 'finish']) assert.doesNotMatch(read(dir, `.claude/commands/vp/${c}.md`), /^context: fork$/m, c);
 });
+
+test('/vp:explore is installed, runs in the main session, and its persona writes nothing', () => {
+  const dir = project();
+  install(dir, { mode: 'init' });
+  const cmd = read(dir, '.claude/commands/vp/explore.md');
+  assert.doesNotMatch(cmd, /^context: fork$/m);
+  assert.match(cmd, /@vpds\/personas\/explorer\.md/);
+  assert.match(read(dir, 'vpds/personas/explorer.md'), /\*\*Writes:\*\* nothing/);
+  assert.ok(existsSync(join(dir, '.cursor/commands/vp-explore.md')));
+});

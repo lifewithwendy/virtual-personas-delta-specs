@@ -112,6 +112,7 @@ Why one planning repo instead of VPDS in every repo? A feature that touches the 
 
 | Step | You run | What happens |
 |---|---|---|
+| 0 *(optional)* | `/vp:explore <idea>` | Read-only thinking partner: checks the specs and code, weighs options, suggests a tier, and ends with a ready `/vp:pm …` line. Writes nothing. |
 | 1 | `/vp:pm <idea>` | PM creates the change and writes `proposal.md` with a **tier** |
 | 2 | `/vp:design <id>` *(large only)* | Designer writes `ux.md`: flows, wireframes, states, a11y |
 | 🚦 | `/vp:approve <id>` or `node vpds/gate.mjs approve <id>` *(large)* | Gate 1 |

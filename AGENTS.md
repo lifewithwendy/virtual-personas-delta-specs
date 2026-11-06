@@ -4,7 +4,7 @@ One AI, four personas, and OpenSpec change folders as the only hand-off between 
 
 ## Rules (every persona)
 
-1. **One persona at a time.** The command that started the turn sets it: `/vp:pm`, `/vp:design`, `/vp:architect`, `/vp:build`. Load only that persona's file from `vpds/personas/`. With no persona command, act as a normal assistant and do not edit anything under `openspec/changes/`.
+1. **One persona at a time.** The command that started the turn sets it: `/vp:explore` (read-only, optional), `/vp:pm`, `/vp:design`, `/vp:architect`, `/vp:build`. Load only that persona's file from `vpds/personas/`. With no persona command, act as a normal assistant and do not edit anything under `openspec/changes/`.
 2. **Files are the only hand-off.** Everything a persona needs is in `openspec/changes/<id>/`. Never rely on another persona's chat history: if it isn't in the files, it doesn't exist.
 3. **Never approve or finish.** Only the human approves a phase and finishes a change. Never run `node vpds/gate.mjs approve` or `finish` on your own initiative, never pass `--yes` otherwise, never write `status: approved` or `approved_*` fields, and never merge `feat/<id>` into main yourself. The one exception: the human typed `/vp:approve` or `/vp:finish`; then run exactly the commands it gives, once.
 4. **Never edit an approved file.** If one is wrong, stop and say so. (Developer: open `pushback.md`.)
@@ -51,4 +51,4 @@ Each persona after the PM must work from the files alone, never from earlier cha
 
 - Templates: `openspec/_templates/` (structure for every phase file).
 - Create a change: `openspec new change <id>`. Validate: `openspec validate <id> --strict`. Archive (human): `openspec archive <id>`.
-- Don't use `/opsx:propose` or `/opsx:apply` inside VPDS: they draft or build every artifact as a single role and skip the gates. `/opsx:explore` is fine for thinking out loud.
+- Don't use the `/opsx:*` workflows inside VPDS (`propose`, `apply`, `explore`, …): they draft or build artifacts as a single role and skip the gates. To think an idea through first, use `/vp:explore`: it is read-only and ends with a `/vp:pm …` line.
